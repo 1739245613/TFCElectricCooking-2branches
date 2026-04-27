@@ -1,0 +1,19 @@
+{
+  "block.tfcelectriccooking.electric_oven": "Electric Oven",
+  "block.tfcelectriccooking.electric_soup_pot": "Electric Soup Pot",
+  "itemGroup.tfcelectriccooking": "TFC Electric Cooking",
+  "tfcelectriccooking.gui.boiling": "Boiling...",
+  "tfcelectriccooking.gui.boiling_at": "Boiling above %d\u00B0C",
+  "tfcelectriccooking.gui.done": "Done",
+  "tfcelectriccooking.gui.done_at": "Done (>%d\u00B0C)",
+  "tfcelectriccooking.gui.idle": "Idle",
+  "tfcelectriccooking.gui.set": "Set",
+  "tfcelectriccooking.jade.done_short": "Done",
+  "tfcelectriccooking.jade.not_started": "Idle",
+  "tfcelectriccooking.jade.recipe_temperature": "Boils above %d\u00B0C",
+  "tfcelectriccooking.tooltip.energy": "%d / %d IF",
+  "tfcelectriccooking.tooltip.target_temperature": "Target: %d\u00B0C",
+  "tfcelectriccooking.tooltip.current_temperature": "Current: %d\u00B0C",
+  "tfcelectriccooking.tooltip.temperature": "%d\u00B0C",
+  "tfcelectriccooking.tooltip.food_trait.electric_oven_baked": "Electric Oven Baked"
+}

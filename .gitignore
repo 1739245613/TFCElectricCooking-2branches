@@ -1,0 +1,65 @@
+# ---------- Gradle ----------
+.gradle/
+build/
+out/
+bin/
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+
+# ---------- Forge / MinecraftForge (ForgeGradle) ----------
+run/
+runs/
+logs/
+crash-reports/
+world/
+saves/
+*.log
+*.log.*
+
+# ForgeGradle 生成的本地映射 / 缓存（如有）
+forge-*.jar
+forge_at.cfg
+
+# ---------- Java ----------
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+hs_err_pid*
+replay_pid*
+!gradle/wrapper/gradle-wrapper.jar
+
+# ---------- IntelliJ IDEA ----------
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# ---------- Eclipse ----------
+.project
+.classpath
+.settings/
+.factorypath
+.apt_generated/
+*.launch
+
+# ---------- VS Code ----------
+.vscode/
+
+# ---------- Claude Code 本地配置 ----------
+.claude/
+CLAUDE.md
+DEV_DOC.md
+一键打包.BAT
+# ---------- 操作系统 ----------
+.DS_Store
+Thumbs.db
+desktop.ini
+ehthumbs.db
+
+# ---------- 编辑器临时文件 ----------
+*.bak
+*.swp
+*.swo
+*~

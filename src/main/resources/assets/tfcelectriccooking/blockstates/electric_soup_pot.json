@@ -1,0 +1,36 @@
+{
+  "multipart": [
+    {
+      "when": { "powered": "false", "facing": "north" },
+      "apply": { "model": "tfcelectriccooking:block/electric_soup_pot" }
+    },
+    {
+      "when": { "powered": "false", "facing": "south" },
+      "apply": { "model": "tfcelectriccooking:block/electric_soup_pot", "y": 180 }
+    },
+    {
+      "when": { "powered": "false", "facing": "west" },
+      "apply": { "model": "tfcelectriccooking:block/electric_soup_pot", "y": 270 }
+    },
+    {
+      "when": { "powered": "false", "facing": "east" },
+      "apply": { "model": "tfcelectriccooking:block/electric_soup_pot", "y": 90 }
+    },
+    {
+      "when": { "powered": "true", "facing": "north" },
+      "apply": { "model": "tfcelectriccooking:block/electric_soup_pot_on" }
+    },
+    {
+      "when": { "powered": "true", "facing": "south" },
+      "apply": { "model": "tfcelectriccooking:block/electric_soup_pot_on", "y": 180 }
+    },
+    {
+      "when": { "powered": "true", "facing": "west" },
+      "apply": { "model": "tfcelectriccooking:block/electric_soup_pot_on", "y": 270 }
+    },
+    {
+      "when": { "powered": "true", "facing": "east" },
+      "apply": { "model": "tfcelectriccooking:block/electric_soup_pot_on", "y": 90 }
+    }
+  ]
+}

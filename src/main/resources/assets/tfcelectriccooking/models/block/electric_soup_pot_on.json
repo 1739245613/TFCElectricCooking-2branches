@@ -1,0 +1,6 @@
+{
+  "parent": "tfcelectriccooking:block/electric_soup_pot",
+  "textures": {
+    "accent": "tfcelectriccooking:block/pot_accent_on"
+  }
+}

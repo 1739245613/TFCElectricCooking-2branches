@@ -1,0 +1,19 @@
+{
+  "block.tfcelectriccooking.electric_oven": "\u7535\u70e4\u7bb1",
+  "block.tfcelectriccooking.electric_soup_pot": "\u7535\u6c64\u9505",
+  "itemGroup.tfcelectriccooking": "\u7fa4\u5cf6\u70e4\u7bb1\u548c\u6c64\u9505",
+  "tfcelectriccooking.gui.boiling": "\u6cb8\u817e\u4e2d...",
+  "tfcelectriccooking.gui.boiling_at": "\u5927\u4e8e %d\u00B0C \u6cb8\u817e",
+  "tfcelectriccooking.gui.done": "\u5b8c\u6210",
+  "tfcelectriccooking.gui.done_at": "\u5b8c\u6210 (\u5927\u4e8e %d\u00B0C)",
+  "tfcelectriccooking.gui.idle": "\u5f85\u673a",
+  "tfcelectriccooking.gui.set": "\u8bbe\u5b9a",
+  "tfcelectriccooking.jade.done_short": "\u5b8c\u6210",
+  "tfcelectriccooking.jade.not_started": "\u5f85\u673a",
+  "tfcelectriccooking.jade.recipe_temperature": "\u6cb8\u817e\u6e29\u5ea6: \u5927\u4e8e %d\u00B0C",
+  "tfcelectriccooking.tooltip.energy": "%d / %d IF",
+  "tfcelectriccooking.tooltip.target_temperature": "\u76ee\u6807\u6e29\u5ea6: %d\u00B0C",
+  "tfcelectriccooking.tooltip.current_temperature": "\u5f53\u524d\u6e29\u5ea6: %d\u00B0C",
+  "tfcelectriccooking.tooltip.temperature": "%d\u00B0C",
+  "tfcelectriccooking.tooltip.food_trait.electric_oven_baked": "\u70e4\u7bb1\u70e4\u5236"
+}
