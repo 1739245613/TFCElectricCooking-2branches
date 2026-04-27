@@ -1,0 +1,99 @@
+modLoader = "javafml"
+loaderVersion = "[4,)"
+license = "All Rights Reserved"
+
+[[mods]]
+    modId = "tfcelectriccooking"
+    version = "1.0.0"
+    displayName = "群峦烤箱和汤锅/TFC Electric Cooking"
+    authors = "交错次元"
+    description = '''
+TFC Electric Cooking / 群峦烤箱和汤锅
+
+中文简介
+这是一个面向 TerraFirmaCraft 中后期流程的电力厨房扩展模组。
+它为 TFC + FirmaLife + Immersive Engineering 环境加入了两台可用电力驱动的高级厨房设备：电烤箱与电汤锅。
+
+主要内容
+- 电烤箱：10 个输入槽，使用 Immersive Engineering 电力加热，兼容 TFC 加热配方与 FirmaLife 烤箱配方。
+- 电汤锅：5 个输入槽，支持流体与 TFC 锅类配方逻辑，提供独立液体显示、加工进度条和完成状态。
+- 手动温度控制：两台设备都支持 0 ~ 1600°C 的目标温度输入。
+- 能量参数：能量容量 16000 IF，基础耗电 20 IF/t，最大输入/输出 256 IF/t。
+- 温度参数：通电时每 tick 向目标温度靠近 3°C，断电后每 tick 降温 1.5°C。
+- 汤锅参数：预沸腾时间 100 ticks，正式烹饪阶段按 4x 速度推进。
+- 食物特性：电烤箱产出的食物会附加 Electric Oven Baked / 烤箱烤制特性，腐败倍率为 0.9x。
+- JEI 兼容：电烤箱会作为 TFC 加热与 FirmaLife 烤箱分类的催化设备显示；电汤锅会作为 TFC / FirmaLife 锅类分类的催化设备显示。
+- Jade 兼容：显示当前温度、汤锅沸腾阈值、待机/进度/完成状态等信息。
+
+温度说明
+汤锅的沸腾阈值使用“大于”逻辑。例如显示“大于 300°C 沸腾”时，实际需要 301°C 或更高温度才会开始处理。
+
+授权与声明
+本模组采用 All Rights Reserved (ARR) 闭源授权。
+仅允许免费使用作者官方发布的未修改编译版，且仅限个人、非商业、合法用途。
+未经作者事先书面许可，禁止二次分发、镜像、转载、整合包收录、预装、修改后二次发布、商业使用或 AI 训练。
+源码默认不公开；在同意随附声明并取得作者明确同意后，可向作者申请获取部分或全部源码。
+本模组包含 AI 生成或 AI 辅助内容；如不接受，请禁用或删除本模组。
+完整条款详见随附 LICENSE 与 DISCLAIMER.md。
+
+English Summary
+TFC Electric Cooking is a mid-to-late-game electric kitchen expansion for TerraFirmaCraft, FirmaLife, and Immersive Engineering.
+It adds two powered cooking appliances: the Electric Oven and the Electric Soup Pot.
+
+Features
+- Electric Oven: 10 input slots, powered by Immersive Engineering energy, compatible with TFC heating recipes and FirmaLife oven recipes.
+- Electric Soup Pot: 5 input slots, supports fluid-based TFC pot recipe logic, with liquid display, progress bar, and finished state.
+- Manual temperature control from 0 to 1600°C.
+- Energy capacity: 16000 IF.
+- Base energy cost: 20 IF/t.
+- Max energy input/output: 256 IF/t.
+- Temperature change: +3°C/tick while powered toward the target, -1.5°C/tick while cooling.
+- Soup pot pre-boil time: 100 ticks.
+- Soup pot cooking progress speed: 4x.
+- Electric oven food output receives the Electric Oven Baked food trait with a 0.9x decay modifier.
+- JEI integration: recipe catalyst support for matching TFC and FirmaLife cooking categories.
+- Jade integration: current temperature, boiling threshold, idle/progress/done status, and soup-pot progress display.
+
+License Notice
+This mod is distributed under All Rights Reserved (ARR).
+Only the author's official unmodified compiled release may be used for free for personal, non-commercial, lawful gameplay.
+No redistribution, mirroring, reposting, modpack inclusion, preinstallation, modified re-release, commercial use, or AI training is allowed without the author's prior written permission.
+Source code is not public by default; you may request access only with the author's explicit consent.
+This mod contains AI-generated or AI-assisted content. Disable or remove it if you do not want such content.
+See the bundled LICENSE and DISCLAIMER.md for the full terms.
+'''
+
+[[dependencies.tfcelectriccooking]]
+    modId = "tfc"
+    type = "required"
+    versionRange = "[4.0.0,)"
+    ordering = "AFTER"
+    side = "BOTH"
+
+[[dependencies.tfcelectriccooking]]
+    modId = "firmalife"
+    type = "required"
+    versionRange = "[3.0.0,)"
+    ordering = "AFTER"
+    side = "BOTH"
+
+[[dependencies.tfcelectriccooking]]
+    modId = "immersiveengineering"
+    type = "required"
+    versionRange = "[12.0.0,)"
+    ordering = "AFTER"
+    side = "BOTH"
+
+[[dependencies.tfcelectriccooking]]
+    modId = "neoforge"
+    type = "required"
+    versionRange = "[21.1,)"
+    ordering = "AFTER"
+    side = "BOTH"
+
+[[dependencies.tfcelectriccooking]]
+    modId = "minecraft"
+    type = "required"
+    versionRange = "[1.21.1,)"
+    ordering = "AFTER"
+    side = "BOTH"

@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "EBC",
+    "SGS",
+    "ASA"
+  ],
+  "key": {
+    "E": { "item": "immersiveengineering:wirecoil_electrum" },
+    "B": { "item": "immersiveengineering:light_bulb" },
+    "C": { "item": "immersiveengineering:wirecoil_electrum" },
+    "S": { "item": "firmalife:metal/sheet/stainless_steel" },
+    "G": { "item": "tfc:wrought_iron_grill" },
+    "A": { "item": "immersiveengineering:component_electronic_adv" }
+  },
+  "result": {
+    "id": "tfcelectriccooking:electric_oven",
+    "count": 1
+  }
+}

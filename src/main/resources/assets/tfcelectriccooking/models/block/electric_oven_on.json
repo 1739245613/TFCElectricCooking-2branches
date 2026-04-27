@@ -1,0 +1,6 @@
+{
+  "parent": "tfcelectriccooking:block/electric_oven",
+  "textures": {
+    "inside": "tfcelectriccooking:block/oven_inside_on"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "variants": {
+    "facing=north,powered=false": { "model": "tfcelectriccooking:block/electric_oven" },
+    "facing=south,powered=false": { "model": "tfcelectriccooking:block/electric_oven", "y": 180 },
+    "facing=west,powered=false": { "model": "tfcelectriccooking:block/electric_oven", "y": 270 },
+    "facing=east,powered=false": { "model": "tfcelectriccooking:block/electric_oven", "y": 90 },
+    "facing=north,powered=true": { "model": "tfcelectriccooking:block/electric_oven_on" },
+    "facing=south,powered=true": { "model": "tfcelectriccooking:block/electric_oven_on", "y": 180 },
+    "facing=west,powered=true": { "model": "tfcelectriccooking:block/electric_oven_on", "y": 270 },
+    "facing=east,powered=true": { "model": "tfcelectriccooking:block/electric_oven_on", "y": 90 }
+  }
+}

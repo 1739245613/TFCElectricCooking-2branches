@@ -1,0 +1,24 @@
+# Gradle 构建产物与缓存
+.gradle/
+build/
+
+# NeoForge runClient 运行时产物
+run/
+runs/
+logs/
+crash-reports/
+
+# VS Code
+.vscode/
+
+# Claude 本地状态
+.claude/
+
+# Windows 系统垃圾
+Thumbs.db
+desktop.ini
+
+# 文档与脚本
+CLAUDE.md
+DEV_DOC.md
+一键打包.BAT

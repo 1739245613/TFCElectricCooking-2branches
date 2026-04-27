@@ -1,0 +1,12 @@
+{
+  "variants": {
+    "facing=north,powered=false": { "model": "tfcelectriccooking:block/electric_soup_pot" },
+    "facing=south,powered=false": { "model": "tfcelectriccooking:block/electric_soup_pot", "y": 180 },
+    "facing=west,powered=false": { "model": "tfcelectriccooking:block/electric_soup_pot", "y": 270 },
+    "facing=east,powered=false": { "model": "tfcelectriccooking:block/electric_soup_pot", "y": 90 },
+    "facing=north,powered=true": { "model": "tfcelectriccooking:block/electric_soup_pot_on" },
+    "facing=south,powered=true": { "model": "tfcelectriccooking:block/electric_soup_pot_on", "y": 180 },
+    "facing=west,powered=true": { "model": "tfcelectriccooking:block/electric_soup_pot_on", "y": 270 },
+    "facing=east,powered=true": { "model": "tfcelectriccooking:block/electric_soup_pot_on", "y": 90 }
+  }
+}
