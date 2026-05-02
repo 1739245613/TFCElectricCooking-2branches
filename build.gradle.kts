@@ -13,7 +13,7 @@ val jadeVersion = "4614153"
 val tfcCurseVersion = "5872631"
 
 val modId = "tfcelectriccooking"
-val modVersion = System.getenv("VERSION") ?: "1.0.1"
+val modVersion = System.getenv("VERSION") ?: "1.0.2"
 val tfcSourceDir = "../TerraFirmaCraft-3.2.21-1.20"
 
 val tfcLocalJars = fileTree("$tfcSourceDir/build/libs") {
@@ -99,6 +99,9 @@ tasks.withType<ProcessResources>().configureEach {
 }
 
 tasks.processResources {
+    filesMatching("META-INF/mods.toml") {
+        expand("file" to mapOf("jarVersion" to project.version))
+    }
     from(rootDir) {
         include("LICENSE", "DISCLAIMER.md")
         into("META-INF")

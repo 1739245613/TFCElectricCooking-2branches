@@ -33,6 +33,7 @@ public class ElectricOvenBlockEntity extends TickableInventoryBlockEntity<Invent
     public static final int ENERGY_CAPACITY = 16000;
     public static final int ENERGY_MAX_IO = 256;
     public static final int ENERGY_PER_TICK = 20;
+    public static final int MAX_TEMPERATURE = 600;
 
     private final EnergyStorage energyStorage = new EnergyStorage(ENERGY_CAPACITY, ENERGY_MAX_IO, ENERGY_MAX_IO, 0)
     {
@@ -84,7 +85,7 @@ public class ElectricOvenBlockEntity extends TickableInventoryBlockEntity<Invent
             switch (index)
             {
                 case 0 -> temperature = value;
-                case 1 -> targetTemperature = value;
+                case 1 -> targetTemperature = Math.max(0, Math.min(MAX_TEMPERATURE, value));
                 default -> {
                 }
             }
@@ -215,7 +216,7 @@ public class ElectricOvenBlockEntity extends TickableInventoryBlockEntity<Invent
 
     public void setTargetTemperature(int temp)
     {
-        targetTemperature = Math.max(0, Math.min(1600, temp));
+        targetTemperature = Math.max(0, Math.min(MAX_TEMPERATURE, temp));
         setChanged();
         markForSync();
     }
@@ -263,7 +264,7 @@ public class ElectricOvenBlockEntity extends TickableInventoryBlockEntity<Invent
     public void loadAdditional(CompoundTag nbt)
     {
         temperature = nbt.getFloat("temperature");
-        targetTemperature = nbt.getInt("targetTemperature");
+        targetTemperature = Math.max(0, Math.min(MAX_TEMPERATURE, nbt.getInt("targetTemperature")));
         if (nbt.contains("energy"))
         {
             energyStorage.deserializeNBT(nbt.get("energy"));

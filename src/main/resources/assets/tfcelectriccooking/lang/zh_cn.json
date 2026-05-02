@@ -1,7 +1,7 @@
 {
   "block.tfcelectriccooking.electric_oven": "\u7535\u70e4\u7bb1",
   "block.tfcelectriccooking.electric_soup_pot": "\u7535\u6c64\u9505",
-  "itemGroup.tfcelectriccooking": "\u7fa4\u5cf6\u70e4\u7bb1\u548c\u6c64\u9505",
+  "itemGroup.tfcelectriccooking": "\u7fa4\u5ce6\u70e4\u7bb1\u548c\u6c64\u9505",
   "tfcelectriccooking.gui.boiling": "\u6cb8\u817e\u4e2d...",
   "tfcelectriccooking.gui.boiling_at": "\u5927\u4e8e %d\u00B0C \u6cb8\u817e",
   "tfcelectriccooking.gui.done": "\u5b8c\u6210",

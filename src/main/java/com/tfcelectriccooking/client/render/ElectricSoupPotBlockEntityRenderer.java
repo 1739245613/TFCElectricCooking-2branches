@@ -18,6 +18,7 @@ public class ElectricSoupPotBlockEntityRenderer implements BlockEntityRenderer<E
     private static final float FLUID_MIN_Z = 5f / 16f;
     private static final float FLUID_MAX_Z = 11f / 16f;
     private static final float DEFAULT_FLUID_Y = 11f / 16f;
+    private static final float MIN_OUTPUT_FLUID_Y = 8.75f / 16f;
     private static final int OUTPUT_SOUP_COLOR = 0xFFB85C24;
 
     public ElectricSoupPotBlockEntityRenderer(BlockEntityRendererProvider.Context context)
@@ -43,7 +44,7 @@ public class ElectricSoupPotBlockEntityRenderer implements BlockEntityRenderer<E
                 FLUID_MIN_Z,
                 FLUID_MAX_X,
                 FLUID_MAX_Z,
-                output.getFluidYLevel(),
+                Math.max(output.getFluidYLevel(), MIN_OUTPUT_FLUID_Y),
                 packedOverlay,
                 packedLight,
                 output.getRenderTexture(),
@@ -63,7 +64,7 @@ public class ElectricSoupPotBlockEntityRenderer implements BlockEntityRenderer<E
             fluid = new FluidStack(Fluids.WATER, FluidHelpers.BUCKET_VOLUME);
         }
 
-        float fluidY = output == null ? DEFAULT_FLUID_Y : output.getFluidYLevel();
+        float fluidY = output == null ? DEFAULT_FLUID_Y : Math.max(output.getFluidYLevel(), MIN_OUTPUT_FLUID_Y);
         if (output == null && pot.shouldRenderAsBoiling())
         {
             final float time = (System.currentTimeMillis() % 1000L) / 1000f;

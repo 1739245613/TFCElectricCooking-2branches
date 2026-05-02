@@ -57,6 +57,7 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
     public static final int ENERGY_CAPACITY = 16000;
     public static final int ENERGY_MAX_IO = 256;
     public static final int ENERGY_PER_TICK = 20;
+    public static final int MAX_TEMPERATURE = 600;
 
     private static final @Nullable Field POT_RECIPE_TEMPERATURE_FIELD = findPotRecipeTemperatureField();
 
@@ -125,7 +126,7 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
             switch (index)
             {
                 case 0 -> temperature = value;
-                case 1 -> targetTemperature = value;
+                case 1 -> targetTemperature = Math.max(0, Math.min(MAX_TEMPERATURE, value));
                 case 3 -> syncedUiProgress = value;
                 case 4 -> syncedUiProgressTotal = value;
                 case 5 -> syncedUiHasOutput = value;
@@ -360,9 +361,7 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
             return InteractionResult.PASS;
         }
 
-        syncToProxy();
         final InteractionResult result = output.onInteract(recipeProxy, player, clickedWith);
-        syncFromProxy();
 
         cleanupOutputState();
         markForSync();
@@ -400,7 +399,7 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
 
     public void setTargetTemperature(int temp)
     {
-        targetTemperature = Math.max(0, Math.min(1600, temp));
+        targetTemperature = Math.max(0, Math.min(MAX_TEMPERATURE, temp));
         setChanged();
         markForSync();
     }
@@ -503,7 +502,7 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
         boilingTicks = nbt.getInt("boilingTicks");
         preBoilingTicks = nbt.getInt("preBoilingTicks");
         temperature = nbt.getFloat("temperature");
-        targetTemperature = nbt.getInt("targetTemperature");
+        targetTemperature = Math.max(0, Math.min(MAX_TEMPERATURE, nbt.getInt("targetTemperature")));
         lastRecipeTemperature = nbt.getInt("lastRecipeTemperature");
         if (nbt.contains("energy"))
         {

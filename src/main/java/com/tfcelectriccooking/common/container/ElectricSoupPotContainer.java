@@ -51,7 +51,7 @@ public class ElectricSoupPotContainer extends BlockEntityContainer<ElectricSoupP
     @Override
     public boolean clickMenuButton(Player player, int id)
     {
-        if (id >= 0 && id <= 1600)
+        if (id >= 0 && id <= ElectricSoupPotBlockEntity.MAX_TEMPERATURE)
         {
             blockEntity.setTargetTemperature(id);
             return true;

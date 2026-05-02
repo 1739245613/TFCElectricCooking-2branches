@@ -15,7 +15,7 @@ TFC Electric Cooking / 群峦烤箱和汤锅
 主要内容
 - 电烤箱：10 个输入槽，使用 Immersive Engineering 电力加热，兼容 TFC 加热配方与 FirmaLife 烤箱配方。
 - 电汤锅：5 个输入槽，支持流体与 TFC 锅类配方逻辑，提供独立液体显示、加工进度条和完成状态。
-- 手动温度控制：两台设备都支持 0 ~ 1600°C 的目标温度输入。
+- 手动温度控制：两台设备都支持 0 ~ 600°C 的目标温度输入。
 - 能量参数：能量容量 16000 IF，基础耗电 20 IF/t，最大输入 / 输出 256 IF/t。
 - 温度参数：通电时每 tick 向目标温度靠近 3°C，断电后每 tick 降温 1.5°C。
 - 汤锅参数：预沸腾时间 100 ticks，正式烹饪阶段按 4x 速度推进。
@@ -41,7 +41,7 @@ It adds two powered cooking appliances: the Electric Oven and the Electric Soup 
 Features
 - Electric Oven: 10 input slots, powered by Immersive Engineering energy, compatible with TFC heating recipes and FirmaLife oven recipes.
 - Electric Soup Pot: 5 input slots, supports fluid-based TFC pot recipe logic, with liquid display, progress bar, and finished state.
-- Manual temperature control from 0 to 1600°C.
+- Manual temperature control from 0 to 600°C.
 - Energy capacity: 16000 IF.
 - Base energy cost: 20 IF/t.
 - Max energy input/output: 256 IF/t.
