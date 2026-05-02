@@ -44,7 +44,7 @@ public class ElectricOvenScreen extends AbstractContainerScreen<ElectricOvenCont
         super.init();
 
         temperatureInput = new EditBox(font, leftPos + CONTROL_X, topPos + INPUT_Y, 40, 14, Component.literal(""));
-        temperatureInput.setMaxLength(4);
+        temperatureInput.setMaxLength(3);
         temperatureInput.setValue(String.valueOf(menu.getBlockEntity().getSyncData().get(1)));
         temperatureInput.setTextColor(0xFFFFFF);
         addRenderableWidget(temperatureInput);
@@ -59,7 +59,7 @@ public class ElectricOvenScreen extends AbstractContainerScreen<ElectricOvenCont
         try
         {
             int temp = Integer.parseInt(temperatureInput.getValue().trim());
-            temp = Math.max(0, Math.min(1600, temp));
+            temp = Math.max(0, Math.min(ElectricOvenBlockEntity.MAX_TEMPERATURE, temp));
             temperatureInput.setValue(String.valueOf(temp));
             if (menu.clickMenuButton(minecraft.player, temp))
             {
@@ -103,7 +103,7 @@ public class ElectricOvenScreen extends AbstractContainerScreen<ElectricOvenCont
 
         int temp = menu.getBlockEntity().getSyncData().get(0);
         drawPanel(graphics, leftPos + TEMPERATURE_PANEL_X, topPos + TEMPERATURE_PANEL_Y, TEMPERATURE_PANEL_WIDTH, TEMPERATURE_PANEL_HEIGHT);
-        int barHeight = Math.min(TEMPERATURE_BAR_MAX_HEIGHT, (int) (TEMPERATURE_BAR_MAX_HEIGHT * temp / 1600f));
+        int barHeight = Math.min(TEMPERATURE_BAR_MAX_HEIGHT, (int) (TEMPERATURE_BAR_MAX_HEIGHT * temp / (float) ElectricOvenBlockEntity.MAX_TEMPERATURE));
         if (barHeight > 0)
         {
             graphics.fill(leftPos + TEMPERATURE_BAR_X, topPos + TEMPERATURE_BAR_BOTTOM - barHeight, leftPos + TEMPERATURE_BAR_X + TEMPERATURE_BAR_WIDTH, topPos + TEMPERATURE_BAR_BOTTOM, 0xFFFF7A1A);

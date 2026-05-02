@@ -9,13 +9,16 @@ val parchmentMinecraftVersion: String = "1.21.1"
 val jeiVersion: String = "19.25.0.321"
 
 val modId: String = "tfcelectriccooking"
-val modVersion: String = System.getenv("VERSION") ?: "1.0.1"
+val modVersion: String = System.getenv("VERSION") ?: "1.0.2"
 val modJavaVersion: String = "21"
 
 // Paths to reference source dependencies (compiled classes)
-val tfcSourceDir: String = "../TerraFirmaCraft-4.0.19-beta"
-val firmaLifeSourceDir: String = "../firmalife-1.21.x"
-val ieSourceDir: String = "../ImmersiveEngineering-12.4.2-194"
+val tfcSourceDir: String = "C:/Users/g1739/Desktop/群峦前置源码/1.21/TerraFirmaCraft-4.1.0"
+val firmaLifeSourceDir: String = "C:/Users/g1739/Desktop/群峦前置源码/1.21/firmalife-1.21.x"
+val ieSourceDir: String = "C:/Users/g1739/Desktop/群峦前置源码/1.21/ImmersiveEngineering-12.4.2-194"
+
+group = "com.tfcelectriccooking"
+version = modVersion
 
 neoForge {
     version = neoForgeVersion
@@ -23,8 +26,6 @@ neoForge {
 
 base {
     archivesName.set("TFCElectricCooking-NeoForge-$minecraftVersion")
-    group = "com.tfcelectriccooking"
-    version = modVersion
 }
 
 java {
@@ -146,6 +147,13 @@ dependencies {
 
 tasks.withType<JavaCompile>().configureEach {
     options.encoding = "UTF-8"
+}
+
+tasks.processResources {
+    val jarVersion = modVersion
+    filesMatching("META-INF/neoforge.mods.toml") {
+        expand("file" to mapOf("jarVersion" to jarVersion))
+    }
 }
 
 tasks.jar {

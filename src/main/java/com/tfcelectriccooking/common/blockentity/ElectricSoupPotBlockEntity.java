@@ -53,6 +53,7 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
     public static final int ENERGY_CAPACITY = 16000;
     public static final int ENERGY_MAX_IO = 256;
     public static final int ENERGY_PER_TICK = 20;
+    public static final int MAX_TEMPERATURE = 600;
     private static final @Nullable Field POT_RECIPE_TEMPERATURE_FIELD = findPotRecipeTemperatureField();
 
     private final EnergyStorage energyStorage = new EnergyStorage(ENERGY_CAPACITY, ENERGY_MAX_IO, ENERGY_MAX_IO, 0);
@@ -94,7 +95,7 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
         {
             switch (index) {
                 case 0 -> temperature = value;
-                case 1 -> targetTemperature = value;
+                case 1 -> targetTemperature = Math.max(0, Math.min(MAX_TEMPERATURE, value));
                 case 2 -> {}
                 case 3 -> syncedUiProgress = value;
                 case 4 -> syncedUiProgressTotal = value;
@@ -195,12 +196,14 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
                     output = finishedOutput.isEmpty() ? null : finishedOutput;
                     lastRecipeTemperature = Math.round(readRecipeTemperature(cachedRecipe));
 
-                    // Clear input slots
-                    for (int i = SLOT_INPUT_START; i <= SLOT_INPUT_END; i++)
+                    if (output != null)
                     {
-                        inv.getItemHandler().setStackInSlot(i, ItemStack.EMPTY);
+                        for (int i = SLOT_INPUT_START; i <= SLOT_INPUT_END; i++)
+                        {
+                            inv.getItemHandler().setStackInSlot(i, ItemStack.EMPTY);
+                        }
+                        inv.clearFluid();
                     }
-                    inv.clearFluid();
 
                     cachedRecipe = null;
                     boilingTicks = 0;
@@ -288,7 +291,7 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
 
     public void setTargetTemperature(int temp)
     {
-        targetTemperature = Math.max(0, Math.min(1600, temp));
+        targetTemperature = Math.max(0, Math.min(MAX_TEMPERATURE, temp));
         setChanged();
         markForSync();
     }
@@ -424,7 +427,7 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
     {
         super.loadAdditional(nbt, provider);
         temperature = nbt.getFloat("temperature");
-        targetTemperature = nbt.getInt("targetTemperature");
+        targetTemperature = Math.max(0, Math.min(MAX_TEMPERATURE, nbt.getInt("targetTemperature")));
         energyStorage.deserializeNBT(provider, nbt.get("energy"));
         boilingTicks = nbt.getInt("boilingTicks");
         preBoilingTicks = nbt.getInt("preBoilingTicks");
