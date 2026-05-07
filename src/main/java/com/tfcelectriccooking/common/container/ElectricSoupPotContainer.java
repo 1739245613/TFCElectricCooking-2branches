@@ -39,7 +39,7 @@ public class ElectricSoupPotContainer extends BlockEntityContainer<ElectricSoupP
     {
         if (slotIndex >= ElectricSoupPotBlockEntity.INPUT_SLOT_COUNT)
         {
-            if (!blockEntity.hasRecipeStarted())
+            if (blockEntity.canAcceptManualInput())
             {
                 return !moveItemStackTo(stack, 0, ElectricSoupPotBlockEntity.INPUT_SLOT_COUNT, false);
             }

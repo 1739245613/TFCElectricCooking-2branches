@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "conditions": [
+    {
+      "type": "forge:mod_loaded",
+      "modid": "firmalife"
+    }
+  ],
+  "ingredients": [
+    {
+      "item": "firmalife:raw_honey"
+    }
+  ],
+  "result": {
+    "item": "minecraft:sugar"
+  }
+}

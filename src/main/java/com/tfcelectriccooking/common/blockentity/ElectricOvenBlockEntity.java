@@ -2,6 +2,7 @@ package com.tfcelectriccooking.common.blockentity;
 
 import com.tfcelectriccooking.common.ModBlocks;
 import com.tfcelectriccooking.common.ModFoodTraits;
+import com.tfcelectriccooking.common.automation.AutomationItemHandler;
 import com.tfcelectriccooking.common.container.ElectricOvenContainer;
 import com.tfcelectriccooking.compat.firmalife.FirmaLifeCompat;
 import net.dries007.tfc.common.blockentities.TickableInventoryBlockEntity;
@@ -24,6 +25,7 @@ import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.energy.EnergyStorage;
 import net.minecraftforge.energy.IEnergyStorage;
+import net.minecraftforge.items.IItemHandler;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -60,7 +62,10 @@ public class ElectricOvenBlockEntity extends TickableInventoryBlockEntity<Invent
         }
     };
     private final LazyOptional<IEnergyStorage> energyCapability = LazyOptional.of(() -> energyStorage);
+    private final AutomationItemHandler automationInventory;
+    private final LazyOptional<IItemHandler> automationItemCapability;
     private final FirmaLifeCompat.WrappedHeatingRecipe[] cachedRecipes = new FirmaLifeCompat.WrappedHeatingRecipe[SLOTS];
+    private final boolean[] completedSlots = new boolean[SLOTS];
 
     private float temperature;
     private int targetTemperature;
@@ -103,6 +108,8 @@ public class ElectricOvenBlockEntity extends TickableInventoryBlockEntity<Invent
         super(ModBlocks.ELECTRIC_OVEN_BLOCK_ENTITY.get(), pos, state,
             self -> new InventoryItemHandler(self, SLOTS),
             Component.translatable("block.tfcelectriccooking.electric_oven"));
+        automationInventory = new AutomationItemHandler(inventory, this::canAutomationInsert, this::canAutomationExtract);
+        automationItemCapability = LazyOptional.of(() -> automationInventory);
     }
 
     public void serverTick()
@@ -200,6 +207,7 @@ public class ElectricOvenBlockEntity extends TickableInventoryBlockEntity<Invent
                     HeatCapability.setTemperature(result, heat.getTemperature());
                 }
                 inventory.setStackInSlot(i, result);
+                completedSlots[i] = true;
                 markForSync();
             }
         }
@@ -244,6 +252,10 @@ public class ElectricOvenBlockEntity extends TickableInventoryBlockEntity<Invent
     @Override
     public void setAndUpdateSlots(int slot)
     {
+        if (slot >= 0 && slot < SLOTS)
+        {
+            completedSlots[slot] = false;
+        }
         super.setAndUpdateSlots(slot);
         needsRecipeUpdate = true;
     }
@@ -260,6 +272,16 @@ public class ElectricOvenBlockEntity extends TickableInventoryBlockEntity<Invent
         return FirmaLifeCompat.getRecipe(stack) != null;
     }
 
+    private boolean canAutomationInsert(int slot, ItemStack stack)
+    {
+        return slot >= 0 && slot < SLOTS && !completedSlots[slot] && isItemValid(slot, stack);
+    }
+
+    private boolean canAutomationExtract(int slot)
+    {
+        return slot >= 0 && slot < SLOTS && completedSlots[slot];
+    }
+
     @Override
     public void loadAdditional(CompoundTag nbt)
     {
@@ -268,6 +290,10 @@ public class ElectricOvenBlockEntity extends TickableInventoryBlockEntity<Invent
         if (nbt.contains("energy"))
         {
             energyStorage.deserializeNBT(nbt.get("energy"));
+        }
+        for (int i = 0; i < SLOTS; i++)
+        {
+            completedSlots[i] = nbt.getBoolean("completedSlot" + i);
         }
         needsRecipeUpdate = true;
         super.loadAdditional(nbt);
@@ -279,6 +305,10 @@ public class ElectricOvenBlockEntity extends TickableInventoryBlockEntity<Invent
         nbt.putFloat("temperature", temperature);
         nbt.putInt("targetTemperature", targetTemperature);
         nbt.put("energy", energyStorage.serializeNBT());
+        for (int i = 0; i < SLOTS; i++)
+        {
+            nbt.putBoolean("completedSlot" + i, completedSlots[i]);
+        }
         super.saveAdditional(nbt);
     }
 
@@ -297,6 +327,10 @@ public class ElectricOvenBlockEntity extends TickableInventoryBlockEntity<Invent
         {
             return energyCapability.cast();
         }
+        if (cap == ForgeCapabilities.ITEM_HANDLER && side != null)
+        {
+            return automationItemCapability.cast();
+        }
         return super.getCapability(cap, side);
     }
 
@@ -305,6 +339,7 @@ public class ElectricOvenBlockEntity extends TickableInventoryBlockEntity<Invent
     {
         super.invalidateCapabilities();
         energyCapability.invalidate();
+        automationItemCapability.invalidate();
     }
 
     @Override
@@ -312,5 +347,6 @@ public class ElectricOvenBlockEntity extends TickableInventoryBlockEntity<Invent
     {
         super.invalidateCaps();
         energyCapability.invalidate();
+        automationItemCapability.invalidate();
     }
 }

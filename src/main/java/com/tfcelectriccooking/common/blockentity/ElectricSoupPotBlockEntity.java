@@ -1,8 +1,14 @@
 package com.tfcelectriccooking.common.blockentity;
 
 import com.tfcelectriccooking.common.ModBlocks;
+import com.tfcelectriccooking.common.automation.AutomationFluidHandler;
+import com.tfcelectriccooking.common.automation.AutomationItemHandler;
+import com.tfcelectriccooking.common.automation.JarringStationAutomationBridge;
+import com.tfcelectriccooking.common.compat.JamJarCompat;
 import com.tfcelectriccooking.common.container.ElectricSoupPotContainer;
 import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.List;
 import net.dries007.tfc.common.TFCTags;
 import net.dries007.tfc.common.blockentities.InventoryBlockEntity;
 import net.dries007.tfc.common.blockentities.PotBlockEntity;
@@ -14,24 +20,33 @@ import net.dries007.tfc.common.capabilities.InventoryItemHandler;
 import net.dries007.tfc.common.capabilities.PartialFluidHandler;
 import net.dries007.tfc.common.capabilities.PartialItemHandler;
 import net.dries007.tfc.common.capabilities.SidedHandler;
+import net.dries007.tfc.common.capabilities.food.FoodCapability;
+import net.dries007.tfc.common.capabilities.food.FoodTrait;
 import net.dries007.tfc.common.fluids.FluidHelpers;
+import net.dries007.tfc.common.recipes.JamPotRecipe;
 import net.dries007.tfc.common.recipes.PotRecipe;
 import net.dries007.tfc.common.recipes.RecipeHelpers;
 import net.dries007.tfc.common.recipes.TFCRecipeTypes;
 import net.dries007.tfc.common.recipes.inventory.EmptyInventory;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerData;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.Fluid;
+import net.minecraft.world.level.material.Fluids;
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.common.util.INBTSerializable;
@@ -43,6 +58,9 @@ import net.minecraftforge.fluids.FluidUtil;
 import net.minecraftforge.fluids.capability.IFluidHandler;
 import net.minecraftforge.fluids.capability.templates.FluidTank;
 import net.minecraftforge.items.IItemHandlerModifiable;
+import net.minecraftforge.items.IItemHandler;
+import net.minecraftforge.items.ItemHandlerHelper;
+import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -60,6 +78,11 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
     public static final int MAX_TEMPERATURE = 600;
 
     private static final @Nullable Field POT_RECIPE_TEMPERATURE_FIELD = findPotRecipeTemperatureField();
+    private static final ResourceLocation FIRMA_LIFE_DRIED_TRAIT = new ResourceLocation("firmalife", "dried");
+    private static final ResourceLocation FIRMA_LIFE_SUGAR_WATER = new ResourceLocation("firmalife", "sugar_water");
+    private static final TagKey<Item> SWEETENER = TagKey.create(Registries.ITEM, new ResourceLocation("tfc", "sweetener"));
+    private static final TagKey<Item> FRUITS = TagKey.create(Registries.ITEM, new ResourceLocation("tfc", "foods/fruits"));
+    private static final TagKey<Fluid> SUGAR_WATER = TagKey.create(Registries.FLUID, FIRMA_LIFE_SUGAR_WATER);
 
     private final EnergyStorage energyStorage = new EnergyStorage(ENERGY_CAPACITY, ENERGY_MAX_IO, ENERGY_MAX_IO, 0)
     {
@@ -86,15 +109,21 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
         }
     };
     private final LazyOptional<IEnergyStorage> energyCapability = LazyOptional.of(() -> energyStorage);
+    private final AutomationItemHandler automationInventory;
+    private final AutomationFluidHandler automationFluidInventory;
+    private final LazyOptional<IItemHandler> automationItemCapability;
+    private final LazyOptional<IFluidHandler> automationFluidCapability;
     private final SidedHandler.Builder<IFluidHandler> sidedFluidInventory;
     private final RecipeProxyPotBlockEntity recipeProxy;
 
     private @Nullable PotRecipe.Output output;
     private @Nullable PotRecipe cachedRecipe;
+    private @Nullable SpecialRecipe cachedSpecialRecipe;
     private int boilingTicks;
     private int preBoilingTicks;
     private float temperature;
     private int targetTemperature;
+    private boolean inventoryOutputReady;
     private boolean needsRecipeUpdate = true;
     private int lastRecipeTemperature;
     private int syncedUiProgress;
@@ -148,6 +177,11 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
         super(ModBlocks.ELECTRIC_SOUP_POT_BLOCK_ENTITY.get(), pos, state,
             PotInventory::new,
             Component.translatable("block.tfcelectriccooking.electric_soup_pot"));
+
+        automationInventory = new AutomationItemHandler(inventory.getItemHandler(), this::canAutomationInsertItem, this::canAutomationExtractItem);
+        automationFluidInventory = new AutomationFluidHandler(inventory.getFluidHandler(), this::canAutomationFillFluid, this::canAutomationDrainFluid);
+        automationItemCapability = LazyOptional.of(() -> automationInventory);
+        automationFluidCapability = LazyOptional.of(() -> automationFluidInventory);
 
         sidedInventory
             .on(new PartialItemHandler(inventory).insert(SLOT_EXTRA_INPUT_START, SLOT_EXTRA_INPUT_START + 1, SLOT_EXTRA_INPUT_START + 2, SLOT_EXTRA_INPUT_START + 3, SLOT_EXTRA_INPUT_END).extract(SLOT_EXTRA_INPUT_START, SLOT_EXTRA_INPUT_START + 1, SLOT_EXTRA_INPUT_START + 2, SLOT_EXTRA_INPUT_START + 3, SLOT_EXTRA_INPUT_END), Direction.Plane.HORIZONTAL)
@@ -228,12 +262,16 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
 
     private void handleCooking()
     {
-        if (output != null)
+        if (output != null || inventoryOutputReady)
         {
             return;
         }
 
-        if (cachedRecipe != null && cachedRecipe.isHotEnough(temperature))
+        if (cachedSpecialRecipe != null && cachedSpecialRecipe.isHotEnough(temperature))
+        {
+            handleSpecialCooking(cachedSpecialRecipe);
+        }
+        else if (cachedRecipe != null && cachedRecipe.isHotEnough(temperature))
         {
             if (preBoilingTicks < PRE_BOIL_TIME)
             {
@@ -278,12 +316,15 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
                 syncFromProxy();
 
                 output = finishedOutput.isEmpty() ? null : finishedOutput;
+                inventoryOutputReady = output == null && hasAnyInputItem();
                 lastRecipeTemperature = Math.round(readRecipeTemperature(recipe));
                 cachedRecipe = null;
+                cachedSpecialRecipe = null;
                 boilingTicks = 0;
                 preBoilingTicks = 0;
                 needsRecipeUpdate = true;
                 markForSync();
+                notifyNearbyJarringStations();
             }
         }
         else if (boilingTicks > 0 || preBoilingTicks > 0)
@@ -301,6 +342,24 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
         {
             return;
         }
+        if (inventoryOutputReady)
+        {
+            cachedRecipe = null;
+            cachedSpecialRecipe = null;
+            if (!hasOutput())
+            {
+                lastRecipeTemperature = 0;
+            }
+            return;
+        }
+
+        cachedSpecialRecipe = findSpecialRecipe();
+        if (cachedSpecialRecipe != null)
+        {
+            cachedRecipe = null;
+            lastRecipeTemperature = cachedSpecialRecipe.temperature;
+            return;
+        }
 
         syncToProxy();
         cachedRecipe = level.getRecipeManager().getRecipeFor(TFCRecipeTypes.POT.get(), recipeProxy.getRecipeInventory(), level).orElse(null);
@@ -313,6 +372,212 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
         {
             lastRecipeTemperature = 0;
         }
+    }
+
+    private void handleSpecialCooking(SpecialRecipe recipe)
+    {
+        if (preBoilingTicks < PRE_BOIL_TIME)
+        {
+            preBoilingTicks++;
+            if (preBoilingTicks == PRE_BOIL_TIME)
+            {
+                markForSync();
+            }
+            return;
+        }
+
+        boilingTicks += SPEED_MULTIPLIER;
+        if (boilingTicks == SPEED_MULTIPLIER)
+        {
+            markForSync();
+        }
+
+        if (boilingTicks >= recipe.duration)
+        {
+            if (recipe == SpecialRecipe.SUGAR_WATER)
+            {
+                finishSugarWaterRecipe();
+            }
+            else if (recipe == SpecialRecipe.SUGAR_WATER_JAM)
+            {
+                output = finishSugarWaterJamRecipe();
+            }
+
+            lastRecipeTemperature = recipe.temperature;
+            cachedRecipe = null;
+            cachedSpecialRecipe = null;
+            boilingTicks = 0;
+            preBoilingTicks = 0;
+            needsRecipeUpdate = true;
+            cleanupOutputState();
+            markForSync();
+            notifyNearbyJarringStations();
+        }
+    }
+
+    private void finishSugarWaterRecipe()
+    {
+        consumeOneSweetener();
+
+        final Fluid fluid = ForgeRegistries.FLUIDS.getValue(FIRMA_LIFE_SUGAR_WATER);
+        if (fluid != null)
+        {
+            inventory.getFluidHandler().drain(Integer.MAX_VALUE, IFluidHandler.FluidAction.EXECUTE);
+            inventory.setFluid(new FluidStack(fluid, FluidHelpers.BUCKET_VOLUME));
+        }
+
+        output = null;
+        inventoryOutputReady = false;
+    }
+
+    private PotRecipe.Output finishSugarWaterJamRecipe()
+    {
+        final FruitBatch batch = getSingleFruitBatch();
+
+        if (batch == null)
+        {
+            return PotRecipe.Output.read(new CompoundTag());
+        }
+
+        inventory.getFluidHandler().drain(Integer.MAX_VALUE, IFluidHandler.FluidAction.EXECUTE);
+        int remaining = batch.count;
+        for (int slot = SLOT_EXTRA_INPUT_START; slot <= SLOT_EXTRA_INPUT_END && remaining > 0; slot++)
+        {
+            final ItemStack stack = inventory.getStackInSlot(slot);
+            if (!stack.isEmpty() && stack.getItem() == batch.sample.getItem())
+            {
+                final int consumed = Math.min(stack.getCount(), remaining);
+                stack.shrink(consumed);
+                inventory.setStackInSlot(slot, stack);
+                remaining -= consumed;
+            }
+        }
+
+        inventoryOutputReady = false;
+        return new JamPotRecipe.JamOutput(batch.jarred, batch.texture);
+    }
+
+    private @Nullable SpecialRecipe findSpecialRecipe()
+    {
+        if (matchesSugarWaterRecipe())
+        {
+            return SpecialRecipe.SUGAR_WATER;
+        }
+        if (matchesSugarWaterJamRecipe())
+        {
+            return SpecialRecipe.SUGAR_WATER_JAM;
+        }
+        return null;
+    }
+
+    private boolean matchesSugarWaterRecipe()
+    {
+        final FluidStack fluid = inventory.getFluidInTank(0);
+        if (fluid.getAmount() < FluidHelpers.BUCKET_VOLUME || !fluid.getFluid().isSame(Fluids.WATER))
+        {
+            return false;
+        }
+
+        boolean foundSweetener = false;
+        for (int slot = SLOT_EXTRA_INPUT_START; slot <= SLOT_EXTRA_INPUT_END; slot++)
+        {
+            final ItemStack stack = inventory.getStackInSlot(slot);
+            if (stack.isEmpty())
+            {
+                continue;
+            }
+            if (!net.dries007.tfc.util.Helpers.isItem(stack, SWEETENER))
+            {
+                return false;
+            }
+            foundSweetener = true;
+        }
+        return foundSweetener && ForgeRegistries.FLUIDS.containsKey(FIRMA_LIFE_SUGAR_WATER);
+    }
+
+    private boolean matchesSugarWaterJamRecipe()
+    {
+        final FluidStack fluid = inventory.getFluidInTank(0);
+        return fluid.getAmount() >= FluidHelpers.BUCKET_VOLUME
+            && isSugarWaterFluid(fluid)
+            && getSingleFruitBatch() != null;
+    }
+
+    private void consumeOneSweetener()
+    {
+        for (int slot = SLOT_EXTRA_INPUT_START; slot <= SLOT_EXTRA_INPUT_END; slot++)
+        {
+            final ItemStack stack = inventory.getStackInSlot(slot);
+            if (!stack.isEmpty() && net.dries007.tfc.util.Helpers.isItem(stack, SWEETENER))
+            {
+                stack.shrink(1);
+                inventory.setStackInSlot(slot, stack);
+                return;
+            }
+        }
+    }
+
+    private @Nullable FruitBatch getSingleFruitBatch()
+    {
+        ItemStack sample = ItemStack.EMPTY;
+        int count = 0;
+        final List<ItemStack> previous = new ArrayList<>(INPUT_SLOT_COUNT);
+
+        for (int slot = SLOT_EXTRA_INPUT_START; slot <= SLOT_EXTRA_INPUT_END; slot++)
+        {
+            final ItemStack stack = inventory.getStackInSlot(slot);
+            if (stack.isEmpty())
+            {
+                continue;
+            }
+            if (!isUsableJamFruit(stack))
+            {
+                return null;
+            }
+            if (sample.isEmpty())
+            {
+                sample = stack.copyWithCount(1);
+            }
+            else if (sample.getItem() != stack.getItem())
+            {
+                return null;
+            }
+            previous.add(stack.copyWithCount(1));
+            count += stack.getCount();
+        }
+
+        if (sample.isEmpty())
+        {
+            return null;
+        }
+
+        count = Math.min(count, INPUT_SLOT_COUNT);
+        final ResourceLocation fruitId = ForgeRegistries.ITEMS.getKey(sample.getItem());
+        if (fruitId == null || !fruitId.getPath().startsWith("food/"))
+        {
+            return null;
+        }
+
+        final String fruitName = fruitId.getPath().substring("food/".length());
+        final Item jarItem = JamJarCompat.getSealedJamJarItem(fruitId.getNamespace(), fruitName);
+        if (jarItem == null)
+        {
+            return null;
+        }
+
+        final ItemStack jarred = new ItemStack(jarItem, count);
+        FoodCapability.updateFoodFromAllPrevious(previous, jarred);
+        return new FruitBatch(sample, count, jarred, new ResourceLocation(fruitId.getNamespace(), "block/jar/" + fruitName));
+    }
+
+    private boolean isUsableJamFruit(ItemStack stack)
+    {
+        if (!net.dries007.tfc.util.Helpers.isItem(stack, FRUITS) || FoodCapability.isRotten(stack))
+        {
+            return false;
+        }
+        final FoodTrait dried = FoodTrait.getTrait(FIRMA_LIFE_DRIED_TRAIT);
+        return dried == null || !FoodCapability.hasTrait(stack, dried);
     }
 
     private void syncToProxy()
@@ -361,6 +626,18 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
             return InteractionResult.PASS;
         }
 
+        if (output instanceof JamPotRecipe.JamOutput && JamJarCompat.isSupportedEmptyJar(clickedWith))
+        {
+            final ItemStack jarred = takeJamOutputWithJar(clickedWith);
+            if (!jarred.isEmpty())
+            {
+                clickedWith.shrink(1);
+                ItemHandlerHelper.giveItemToPlayer(player, jarred);
+                return InteractionResult.SUCCESS;
+            }
+            return InteractionResult.PASS;
+        }
+
         final InteractionResult result = output.onInteract(recipeProxy, player, clickedWith);
 
         cleanupOutputState();
@@ -368,9 +645,72 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
         return result;
     }
 
+    public ItemStack tryTakeOutputWithJar(ItemStack jar)
+    {
+        if (!(output instanceof JamPotRecipe.JamOutput) || !JamJarCompat.isSupportedEmptyJar(jar))
+        {
+            return ItemStack.EMPTY;
+        }
+        return takeJamOutputWithJar(jar);
+    }
+
+    private ItemStack takeJamOutputWithJar(ItemStack jar)
+    {
+        if (!(output instanceof JamPotRecipe.JamOutput))
+        {
+            return ItemStack.EMPTY;
+        }
+
+        final CompoundTag outputNbt = PotRecipe.Output.write(output);
+        if (!outputNbt.contains("item"))
+        {
+            return ItemStack.EMPTY;
+        }
+
+        final ItemStack outputStack = ItemStack.of(outputNbt.getCompound("item"));
+        if (outputStack.isEmpty())
+        {
+            cleanupOutputState();
+            markForSync();
+            return ItemStack.EMPTY;
+        }
+
+        final ItemStack storedJar = outputStack.copyWithCount(1);
+        final ItemStack jarredStack = JamJarCompat.createFilledJar(storedJar, jar);
+        if (jarredStack.isEmpty())
+        {
+            return ItemStack.EMPTY;
+        }
+
+        outputStack.shrink(1);
+        if (outputStack.isEmpty())
+        {
+            output = null;
+        }
+        else
+        {
+            outputNbt.put("item", outputStack.save(new CompoundTag()));
+            output = PotRecipe.Output.read(outputNbt);
+        }
+        cleanupOutputState();
+        needsRecipeUpdate = true;
+        setChanged();
+        markForSync();
+        return jarredStack;
+    }
+
+    private void notifyNearbyJarringStations()
+    {
+        final Level level = getLevel();
+        if (level != null && hasOutput())
+        {
+            JarringStationAutomationBridge.tryFillAroundPot(level, worldPosition);
+        }
+    }
+
     public boolean handleFluidInteraction(Player player, InteractionHand hand, ItemStack stack)
     {
-        if (hasRecipeStarted() || hasOutput())
+        if (!canAcceptManualInput())
         {
             return false;
         }
@@ -379,7 +719,7 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
 
     public boolean isBoiling()
     {
-        return cachedRecipe != null && output == null && cachedRecipe.isHotEnough(temperature);
+        return output == null && ((cachedSpecialRecipe != null && cachedSpecialRecipe.isHotEnough(temperature)) || (cachedRecipe != null && cachedRecipe.isHotEnough(temperature)));
     }
 
     public boolean hasRecipeStarted()
@@ -412,6 +752,11 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
     public boolean hasOutput()
     {
         return output != null && !output.isEmpty();
+    }
+
+    public boolean canAcceptManualInput()
+    {
+        return !hasRecipeStarted() && !hasOutput() && !inventoryOutputReady;
     }
 
     public EnergyStorage getEnergyStorage()
@@ -451,16 +796,24 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
 
     private int getUiProgress()
     {
-        return cachedRecipe != null ? preBoilingTicks + boilingTicks : 0;
+        return cachedSpecialRecipe != null || cachedRecipe != null ? preBoilingTicks + boilingTicks : 0;
     }
 
     private int getUiProgressTotal()
     {
+        if (cachedSpecialRecipe != null)
+        {
+            return PRE_BOIL_TIME + cachedSpecialRecipe.duration;
+        }
         return cachedRecipe != null ? PRE_BOIL_TIME + cachedRecipe.getDuration() : 0;
     }
 
     private int getUiRecipeTemperature()
     {
+        if (cachedSpecialRecipe != null)
+        {
+            return cachedSpecialRecipe.temperature;
+        }
         return cachedRecipe != null ? Math.round(readRecipeTemperature(cachedRecipe)) : lastRecipeTemperature;
     }
 
@@ -470,6 +823,10 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
         {
             output = null;
             lastRecipeTemperature = 0;
+        }
+        if (inventoryOutputReady && (hasOnlySweetenerInputs() || !hasAnyInputItem()))
+        {
+            inventoryOutputReady = false;
         }
     }
 
@@ -494,6 +851,62 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
         return slot >= SLOT_EXTRA_INPUT_START && slot <= SLOT_EXTRA_INPUT_END;
     }
 
+    private boolean canAutomationInsertItem(int slot, ItemStack stack)
+    {
+        return slot >= SLOT_EXTRA_INPUT_START && slot <= SLOT_EXTRA_INPUT_END && canAcceptManualInput();
+    }
+
+    private boolean canAutomationExtractItem(int slot)
+    {
+        return slot >= SLOT_EXTRA_INPUT_START && slot <= SLOT_EXTRA_INPUT_END && inventoryOutputReady;
+    }
+
+    private boolean canAutomationFillFluid(FluidStack stack)
+    {
+        return !stack.isEmpty() && canAcceptManualInput() && net.dries007.tfc.util.Helpers.isFluid(stack.getFluid(), TFCTags.Fluids.USABLE_IN_POT);
+    }
+
+    private boolean canAutomationDrainFluid()
+    {
+        return !hasRecipeStarted() && !hasOutput();
+    }
+
+    private boolean isSugarWaterFluid(FluidStack fluid)
+    {
+        return !fluid.isEmpty() && net.dries007.tfc.util.Helpers.isFluid(fluid.getFluid(), SUGAR_WATER);
+    }
+
+    private boolean hasOnlySweetenerInputs()
+    {
+        boolean foundSweetener = false;
+        for (int slot = SLOT_EXTRA_INPUT_START; slot <= SLOT_EXTRA_INPUT_END; slot++)
+        {
+            final ItemStack stack = inventory.getStackInSlot(slot);
+            if (stack.isEmpty())
+            {
+                continue;
+            }
+            if (!net.dries007.tfc.util.Helpers.isItem(stack, SWEETENER))
+            {
+                return false;
+            }
+            foundSweetener = true;
+        }
+        return foundSweetener;
+    }
+
+    private boolean hasAnyInputItem()
+    {
+        for (int slot = SLOT_EXTRA_INPUT_START; slot <= SLOT_EXTRA_INPUT_END; slot++)
+        {
+            if (!inventory.getStackInSlot(slot).isEmpty())
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
     @Override
     public void loadAdditional(CompoundTag nbt)
     {
@@ -503,6 +916,7 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
         preBoilingTicks = nbt.getInt("preBoilingTicks");
         temperature = nbt.getFloat("temperature");
         targetTemperature = Math.max(0, Math.min(MAX_TEMPERATURE, nbt.getInt("targetTemperature")));
+        inventoryOutputReady = nbt.getBoolean("inventoryOutputReady");
         lastRecipeTemperature = nbt.getInt("lastRecipeTemperature");
         if (nbt.contains("energy"))
         {
@@ -510,6 +924,7 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
         }
         needsRecipeUpdate = true;
         super.loadAdditional(nbt);
+        cleanupOutputState();
     }
 
     @Override
@@ -523,6 +938,7 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
         nbt.putInt("preBoilingTicks", preBoilingTicks);
         nbt.putFloat("temperature", temperature);
         nbt.putInt("targetTemperature", targetTemperature);
+        nbt.putBoolean("inventoryOutputReady", inventoryOutputReady);
         nbt.putInt("lastRecipeTemperature", lastRecipeTemperature);
         nbt.put("energy", energyStorage.serializeNBT());
         super.saveAdditional(nbt);
@@ -543,9 +959,13 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
         {
             return energyCapability.cast();
         }
+        if (cap == ForgeCapabilities.ITEM_HANDLER && side != null)
+        {
+            return automationItemCapability.cast();
+        }
         if (cap == Capabilities.FLUID)
         {
-            return sidedFluidInventory.getSidedHandler(side).cast();
+            return automationFluidCapability.cast();
         }
         return super.getCapability(cap, side);
     }
@@ -556,6 +976,8 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
         super.invalidateCapabilities();
         sidedFluidInventory.invalidate();
         energyCapability.invalidate();
+        automationItemCapability.invalidate();
+        automationFluidCapability.invalidate();
     }
 
     @Override
@@ -564,6 +986,8 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
         super.invalidateCaps();
         sidedFluidInventory.invalidate();
         energyCapability.invalidate();
+        automationItemCapability.invalidate();
+        automationFluidCapability.invalidate();
     }
 
     private static @Nullable Field findPotRecipeTemperatureField()
@@ -594,6 +1018,28 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
         }
         return 0f;
     }
+
+    private enum SpecialRecipe
+    {
+        SUGAR_WATER(500, 300),
+        SUGAR_WATER_JAM(500, 300);
+
+        private final int duration;
+        private final int temperature;
+
+        SpecialRecipe(int duration, int temperature)
+        {
+            this.duration = duration;
+            this.temperature = temperature;
+        }
+
+        private boolean isHotEnough(float temperature)
+        {
+            return temperature > this.temperature;
+        }
+    }
+
+    private record FruitBatch(ItemStack sample, int count, ItemStack jarred, ResourceLocation texture) {}
 
     public static class PotInventory implements EmptyInventory, DelegateItemHandler, DelegateFluidHandler, INBTSerializable<CompoundTag>
     {

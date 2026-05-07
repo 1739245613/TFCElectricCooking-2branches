@@ -2,12 +2,15 @@ package com.tfcelectriccooking;
 
 import com.tfcelectriccooking.client.ModClientEvents;
 import com.tfcelectriccooking.common.ModBlocks;
+import com.tfcelectriccooking.common.ModConfig;
 import com.tfcelectriccooking.common.ModContainerTypes;
 import com.tfcelectriccooking.common.ModCreativeTab;
 import com.tfcelectriccooking.common.ModFoodTraits;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.config.ModConfig.Type;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.fml.loading.FMLEnvironment;
 
@@ -19,6 +22,8 @@ public final class TFCElectricCooking
     public TFCElectricCooking()
     {
         final IEventBus modBus = FMLJavaModLoadingContext.get().getModEventBus();
+
+        ModLoadingContext.get().registerConfig(Type.COMMON, ModConfig.COMMON_SPEC);
 
         ModFoodTraits.init();
         ModBlocks.register(modBus);
