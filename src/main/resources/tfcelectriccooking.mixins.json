@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "package": "com.tfcelectriccooking.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "InventoryBlockEntityMixin",
+    "JarringStationBlockEntityMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

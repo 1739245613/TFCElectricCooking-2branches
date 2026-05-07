@@ -12,6 +12,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.energy.EnergyStorage;
+import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.ItemStackHandler;
 import org.jetbrains.annotations.Nullable;
 
@@ -26,6 +27,7 @@ import com.eerussianguy.firmalife.common.recipes.WrappedHeatingRecipe;
 import com.tfcelectriccooking.TFCElectricCooking;
 import com.tfcelectriccooking.common.ModBlocks;
 import com.tfcelectriccooking.common.ModFoodTraits;
+import com.tfcelectriccooking.common.automation.AutomationItemHandler;
 import com.tfcelectriccooking.common.block.ElectricOvenBlock;
 import com.tfcelectriccooking.common.container.ElectricOvenContainer;
 
@@ -39,6 +41,8 @@ public class ElectricOvenBlockEntity extends TickableInventoryBlockEntity<ItemSt
 
     private final EnergyStorage energyStorage = new EnergyStorage(ENERGY_CAPACITY, ENERGY_MAX_IO, ENERGY_MAX_IO, 0);
     private final WrappedHeatingRecipe[] cachedRecipes = new WrappedHeatingRecipe[SLOTS];
+    private final boolean[] completedSlots = new boolean[SLOTS];
+    private final AutomationItemHandler automationInventory;
     private float temperature = 0;
     private int targetTemperature = 0;
     private boolean needsRecipeUpdate = true;
@@ -74,6 +78,7 @@ public class ElectricOvenBlockEntity extends TickableInventoryBlockEntity<ItemSt
     public ElectricOvenBlockEntity(BlockPos pos, BlockState state)
     {
         super(ModBlocks.ELECTRIC_OVEN_BLOCK_ENTITY.get(), pos, state, defaultInventory(SLOTS), TFCElectricCooking.MOD_ID);
+        automationInventory = new AutomationItemHandler(getInventory(), this::canAutomationInsert, this::canAutomationExtract);
     }
 
     public static InventoryBlockEntity.InventoryFactory<ItemStackHandler> defaultInventory(int slots)
@@ -190,6 +195,7 @@ public class ElectricOvenBlockEntity extends TickableInventoryBlockEntity<ItemSt
                     HeatCapability.setTemperature(result, heat.getTemperature());
                 }
                 inv.setStackInSlot(i, result);
+                completedSlots[i] = true;
                 markForSync();
             }
         }
@@ -222,6 +228,11 @@ public class ElectricOvenBlockEntity extends TickableInventoryBlockEntity<ItemSt
         return energyStorage;
     }
 
+    public IItemHandler getAutomationInventory()
+    {
+        return automationInventory;
+    }
+
     public float getTemperature()
     {
         return temperature;
@@ -240,6 +251,10 @@ public class ElectricOvenBlockEntity extends TickableInventoryBlockEntity<ItemSt
     @Override
     public void setAndUpdateSlots(int slot)
     {
+        if (slot >= 0 && slot < SLOTS)
+        {
+            completedSlots[slot] = false;
+        }
         super.setAndUpdateSlots(slot);
         needsRecipeUpdate = true;
     }
@@ -253,6 +268,16 @@ public class ElectricOvenBlockEntity extends TickableInventoryBlockEntity<ItemSt
         return WrappedHeatingRecipe.getRecipe(stack) != null;
     }
 
+    private boolean canAutomationInsert(int slot, ItemStack stack)
+    {
+        return slot >= 0 && slot < SLOTS && !completedSlots[slot] && isItemValid(slot, stack);
+    }
+
+    private boolean canAutomationExtract(int slot)
+    {
+        return slot >= 0 && slot < SLOTS && completedSlots[slot];
+    }
+
     @Override
     public void loadAdditional(CompoundTag nbt, HolderLookup.Provider provider)
     {
@@ -260,6 +285,10 @@ public class ElectricOvenBlockEntity extends TickableInventoryBlockEntity<ItemSt
         temperature = nbt.getFloat("temperature");
         targetTemperature = Math.max(0, Math.min(MAX_TEMPERATURE, nbt.getInt("targetTemperature")));
         energyStorage.deserializeNBT(provider, nbt.get("energy"));
+        for (int i = 0; i < SLOTS; i++)
+        {
+            completedSlots[i] = nbt.getBoolean("completedSlot" + i);
+        }
         needsRecipeUpdate = true;
     }
 
@@ -270,6 +299,10 @@ public class ElectricOvenBlockEntity extends TickableInventoryBlockEntity<ItemSt
         nbt.putFloat("temperature", temperature);
         nbt.putInt("targetTemperature", targetTemperature);
         nbt.put("energy", energyStorage.serializeNBT(provider));
+        for (int i = 0; i < SLOTS; i++)
+        {
+            nbt.putBoolean("completedSlot" + i, completedSlots[i]);
+        }
     }
 
     @Nullable

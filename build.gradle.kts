@@ -9,7 +9,7 @@ val parchmentMinecraftVersion: String = "1.21.1"
 val jeiVersion: String = "19.25.0.321"
 
 val modId: String = "tfcelectriccooking"
-val modVersion: String = System.getenv("VERSION") ?: "1.0.2"
+val modVersion: String = System.getenv("VERSION") ?: "1.1.0"
 val modJavaVersion: String = "21"
 
 // Paths to reference source dependencies (compiled classes)

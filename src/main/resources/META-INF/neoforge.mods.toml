@@ -2,6 +2,9 @@ modLoader = "javafml"
 loaderVersion = "[4,)"
 license = "All Rights Reserved"
 
+[[mixins]]
+    config = "tfcelectriccooking.mixins.json"
+
 [[mods]]
     modId = "tfcelectriccooking"
     version = "${file.jarVersion}"
@@ -22,6 +25,9 @@ TFC Electric Cooking / 群峦烤箱和汤锅
 - 温度参数：通电时每 tick 向目标温度靠近 3°C，断电后每 tick 降温 1.5°C。
 - 汤锅参数：预沸腾时间 100 ticks，正式烹饪阶段按 4x 速度推进。
 - 食物特性：电烤箱产出的食物会附加 Electric Oven Baked / 烤箱烤制特性，腐败倍率为 0.9x。
+- 新增电汤锅专用配方：1000 mB 水 + 1 个甜味剂可制作 1000 mB FirmaLife 糖水；1000 mB 糖水 + 单一水果可按水果数量制作果酱锅内输出。
+- 新增蜂蜜转糖配方：FirmaLife 生蜂蜜和蜂蜜罐可合成为糖，蜂蜜罐依赖原物品的合成剩余物返还空罐。
+- 装罐台自动化：FirmaLife 装罐台可自动输入空罐、输出成品，并可正对电汤锅自动装取果酱；无盖空罐产出无盖果酱，带盖空罐产出密封果酱。
 - JEI 兼容：电烤箱会作为 TFC 加热与 FirmaLife 烤箱分类的催化设备显示；电汤锅会作为 TFC / FirmaLife 锅类分类的催化设备显示。
 - Jade 兼容：显示当前温度、汤锅沸腾阈值、待机/进度/完成状态等信息。
 
@@ -51,6 +57,9 @@ Features
 - Soup pot pre-boil time: 100 ticks.
 - Soup pot cooking progress speed: 4x.
 - Electric oven food output receives the Electric Oven Baked food trait with a 0.9x decay modifier.
+- New Electric Soup Pot recipes: 1000 mB water + 1 sweetener creates 1000 mB FirmaLife sugar water; 1000 mB sugar water + one kind of fruit creates jam output based on the fruit count.
+- New honey-to-sugar recipes: FirmaLife raw honey and honey jars can be crafted into sugar; honey jars rely on their normal crafting remainder to return the empty jar.
+- Jarring station automation: FirmaLife jarring stations can accept empty jars, output filled products, and automatically jar jam from a facing Electric Soup Pot. Empty jars create unsealed jam, while lidded jars create sealed jam.
 - JEI integration: recipe catalyst support for matching TFC and FirmaLife cooking categories.
 - Jade integration: current temperature, boiling threshold, idle/progress/done status, and soup-pot progress display.
 

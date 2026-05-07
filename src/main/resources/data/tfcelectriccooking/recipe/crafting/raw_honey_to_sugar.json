@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "firmalife:food/raw_honey"
+    }
+  ],
+  "result": {
+    "id": "minecraft:sugar",
+    "count": 1
+  }
+}

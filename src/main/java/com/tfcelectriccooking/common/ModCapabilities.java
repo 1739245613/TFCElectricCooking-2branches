@@ -18,7 +18,7 @@ public class ModCapabilities
         event.registerBlockEntity(
             Capabilities.ItemHandler.BLOCK,
             ModBlocks.ELECTRIC_OVEN_BLOCK_ENTITY.get(),
-            InventoryBlockEntity::getSidedInventory
+            (be, side) -> side == null ? be.getInventory() : be.getAutomationInventory()
         );
 
         // Electric Soup Pot - energy + items + fluids
@@ -30,7 +30,7 @@ public class ModCapabilities
         event.registerBlockEntity(
             Capabilities.ItemHandler.BLOCK,
             ModBlocks.ELECTRIC_SOUP_POT_BLOCK_ENTITY.get(),
-            InventoryBlockEntity::getSidedInventory
+            (be, side) -> side == null ? be.getInventory().getItemHandler() : be.getAutomationInventory()
         );
         event.registerBlockEntity(
             Capabilities.FluidHandler.BLOCK,
