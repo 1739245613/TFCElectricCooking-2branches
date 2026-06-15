@@ -1,6 +1,7 @@
 package com.tfcelectriccooking.common.container;
 
 import com.tfcelectriccooking.common.ModContainerTypes;
+import com.tfcelectriccooking.common.block.ElectricOvenBlock;
 import com.tfcelectriccooking.common.blockentity.ElectricOvenBlockEntity;
 import net.dries007.tfc.common.capabilities.Capabilities;
 import net.dries007.tfc.common.container.BlockEntityContainer;
@@ -28,9 +29,9 @@ public class ElectricOvenContainer extends BlockEntityContainer<ElectricOvenBloc
         blockEntity.getCapability(Capabilities.ITEM).ifPresent(handler -> {
             for (int row = 0; row < 2; row++)
             {
-                for (int col = 0; col < 5; col++)
+                for (int col = 0; col < 3; col++)
                 {
-                    addSlot(new CallbackSlot(blockEntity, handler, row * 5 + col, 62 + col * 18, 24 + row * 18));
+                    addSlot(new CallbackSlot(blockEntity, handler, row * 3 + col, 71 + col * 18, 24 + row * 18));
                 }
             }
         });
@@ -55,5 +56,15 @@ public class ElectricOvenContainer extends BlockEntityContainer<ElectricOvenBloc
             return true;
         }
         return false;
+    }
+
+    @Override
+    public void removed(Player player)
+    {
+        if (!player.level().isClientSide)
+        {
+            ElectricOvenBlock.setOpen(player.level(), blockEntity.getBlockPos(), blockEntity.getBlockState(), false);
+        }
+        super.removed(player);
     }
 }

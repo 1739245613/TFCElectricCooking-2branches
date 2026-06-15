@@ -31,11 +31,11 @@ import org.jetbrains.annotations.Nullable;
 
 public class ElectricOvenBlockEntity extends TickableInventoryBlockEntity<InventoryItemHandler>
 {
-    public static final int SLOTS = 10;
+    public static final int SLOTS = 6;
     public static final int ENERGY_CAPACITY = 16000;
     public static final int ENERGY_MAX_IO = 256;
     public static final int ENERGY_PER_TICK = 20;
-    public static final int MAX_TEMPERATURE = 600;
+    public static final int MAX_TEMPERATURE = 800;
 
     private final EnergyStorage energyStorage = new EnergyStorage(ENERGY_CAPACITY, ENERGY_MAX_IO, ENERGY_MAX_IO, 0)
     {
@@ -158,7 +158,8 @@ public class ElectricOvenBlockEntity extends TickableInventoryBlockEntity<Invent
     private void handleTemperature()
     {
         final boolean powered = getBlockState().getValue(com.tfcelectriccooking.common.block.ElectricOvenBlock.POWERED);
-        if (powered && targetTemperature > 0)
+        final boolean open = getBlockState().getValue(com.tfcelectriccooking.common.block.ElectricOvenBlock.OPEN);
+        if (powered && targetTemperature > 0 && !open)
         {
             if (temperature < targetTemperature)
             {
@@ -177,7 +178,7 @@ public class ElectricOvenBlockEntity extends TickableInventoryBlockEntity<Invent
 
     private void handleCooking(Level level)
     {
-        if (temperature <= 0)
+        if (temperature <= 0 || getBlockState().getValue(com.tfcelectriccooking.common.block.ElectricOvenBlock.OPEN))
         {
             return;
         }

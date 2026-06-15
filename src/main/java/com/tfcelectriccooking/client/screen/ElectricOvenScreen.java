@@ -99,9 +99,9 @@ public class ElectricOvenScreen extends AbstractContainerScreen<ElectricOvenCont
 
         for (int row = 0; row < 2; row++)
         {
-            for (int col = 0; col < 5; col++)
+            for (int col = 0; col < 3; col++)
             {
-                drawSlot(graphics, leftPos + 61 + col * SLOT_SIZE, topPos + 23 + row * SLOT_SIZE);
+                drawSlot(graphics, leftPos + 70 + col * SLOT_SIZE, topPos + 23 + row * SLOT_SIZE);
             }
         }
 
@@ -131,7 +131,7 @@ public class ElectricOvenScreen extends AbstractContainerScreen<ElectricOvenCont
         graphics.drawString(font, temperatureText, getTemperatureCenterX() - font.width(temperatureText) / 2, TEMPERATURE_TEXT_Y, 0xD96817, false);
 
         final int energy = menu.getBlockEntity().getSyncData().get(2);
-        final String energyText = energy + " IF";
+        final String energyText = energy + " FE";
         graphics.drawString(font, energyText, imageWidth - 8 - font.width(energyText), 76, 0x2E8B57, false);
     }
 

@@ -6,6 +6,7 @@ import net.dries007.tfc.common.blockentities.InventoryBlockEntity;
 import net.dries007.tfc.util.Helpers;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -34,6 +35,7 @@ public class ElectricOvenBlock extends Block implements EntityBlock
 {
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
     public static final BooleanProperty POWERED = BooleanProperty.create("powered");
+    public static final BooleanProperty OPEN = BlockStateProperties.OPEN;
     private static final VoxelShape SHAPE = Block.box(1, 1, 1, 15, 15, 15);
 
     public ElectricOvenBlock()
@@ -46,13 +48,14 @@ public class ElectricOvenBlock extends Block implements EntityBlock
             .lightLevel(state -> state.getValue(POWERED) ? 13 : 0));
         registerDefaultState(stateDefinition.any()
             .setValue(FACING, Direction.NORTH)
-            .setValue(POWERED, false));
+            .setValue(POWERED, false)
+            .setValue(OPEN, false));
     }
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder)
     {
-        builder.add(FACING, POWERED);
+        builder.add(FACING, POWERED, OPEN);
     }
 
     @Override
@@ -97,13 +100,30 @@ public class ElectricOvenBlock extends Block implements EntityBlock
                 return InteractionResult.SUCCESS;
             }
 
+            if (player.isShiftKeyDown())
+            {
+                final boolean open = !state.getValue(OPEN);
+                setOpen(level, pos, state, open);
+                player.displayClientMessage(Component.translatable(open ? "tfcelectriccooking.message.container_open" : "tfcelectriccooking.message.container_closed"), true);
+                return InteractionResult.SUCCESS;
+            }
+
             if (player instanceof ServerPlayer serverPlayer)
             {
+                setOpen(level, pos, state, true);
                 Helpers.openScreen(serverPlayer, oven, pos);
             }
             return InteractionResult.SUCCESS;
         }
         return InteractionResult.PASS;
+    }
+
+    public static void setOpen(Level level, BlockPos pos, BlockState state, boolean open)
+    {
+        if (state.hasProperty(OPEN) && state.getValue(OPEN) != open)
+        {
+            level.setBlockAndUpdate(pos, state.setValue(OPEN, open));
+        }
     }
 
     @Override

@@ -177,7 +177,7 @@ public class ElectricSoupPotScreen extends AbstractContainerScreen<ElectricSoupP
         graphics.drawString(font, status, statusX, 81, hasOutput ? OUTPUT_SOUP_COLOR : 0xD96817, false);
 
         final int energy = menu.getBlockEntity().getSyncData().get(2);
-        final String energyText = energy + " IF";
+        final String energyText = energy + " FE";
         graphics.drawString(font, energyText, 121 + (34 - font.width(energyText)) / 2, 93, 0x2E8B57, false);
     }
 

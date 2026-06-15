@@ -1,6 +1,7 @@
 package com.tfcelectriccooking.common.container;
 
 import com.tfcelectriccooking.common.ModContainerTypes;
+import com.tfcelectriccooking.common.block.ElectricSoupPotBlock;
 import com.tfcelectriccooking.common.blockentity.ElectricSoupPotBlockEntity;
 import net.dries007.tfc.common.capabilities.Capabilities;
 import net.dries007.tfc.common.container.BlockEntityContainer;
@@ -57,5 +58,15 @@ public class ElectricSoupPotContainer extends BlockEntityContainer<ElectricSoupP
             return true;
         }
         return false;
+    }
+
+    @Override
+    public void removed(Player player)
+    {
+        if (!player.level().isClientSide)
+        {
+            ElectricSoupPotBlock.setOpen(player.level(), blockEntity.getBlockPos(), blockEntity.getBlockState(), false);
+        }
+        super.removed(player);
     }
 }

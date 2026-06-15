@@ -26,6 +26,7 @@ import net.dries007.tfc.common.fluids.FluidHelpers;
 import net.dries007.tfc.common.recipes.JamPotRecipe;
 import net.dries007.tfc.common.recipes.PotRecipe;
 import net.dries007.tfc.common.recipes.RecipeHelpers;
+import net.dries007.tfc.common.recipes.SimplePotRecipe;
 import net.dries007.tfc.common.recipes.TFCRecipeTypes;
 import net.dries007.tfc.common.recipes.inventory.EmptyInventory;
 import net.minecraft.core.BlockPos;
@@ -75,7 +76,8 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
     public static final int ENERGY_CAPACITY = 16000;
     public static final int ENERGY_MAX_IO = 256;
     public static final int ENERGY_PER_TICK = 20;
-    public static final int MAX_TEMPERATURE = 600;
+    public static final int MAX_TEMPERATURE = 800;
+    private static final int SUGAR_WATER_AMOUNT = 500;
 
     private static final @Nullable Field POT_RECIPE_TEMPERATURE_FIELD = findPotRecipeTemperatureField();
     private static final ResourceLocation FIRMA_LIFE_DRIED_TRAIT = new ResourceLocation("firmalife", "dried");
@@ -283,8 +285,9 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
                 return;
             }
 
-            boilingTicks += SPEED_MULTIPLIER;
-            if (boilingTicks == SPEED_MULTIPLIER)
+            final int speed = getCookingSpeedMultiplier();
+            boilingTicks += speed;
+            if (boilingTicks == speed)
             {
                 markForSync();
             }
@@ -306,7 +309,14 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
                     RecipeHelpers.clearCraftingInput();
                 }
 
-                proxyInventory.getFluidHandler().drain(Integer.MAX_VALUE, IFluidHandler.FluidAction.EXECUTE);
+                if (recipe instanceof SimplePotRecipe simpleRecipe && !simpleRecipe.getDisplayFluid().isEmpty())
+                {
+                    proxyInventory.getFluidHandler().drain(Integer.MAX_VALUE, IFluidHandler.FluidAction.EXECUTE);
+                }
+                else
+                {
+                    proxyInventory.getFluidHandler().drain(recipe.getFluidIngredient().amount(), IFluidHandler.FluidAction.EXECUTE);
+                }
                 for (int slot = SLOT_EXTRA_INPUT_START; slot <= SLOT_EXTRA_INPUT_END; slot++)
                 {
                     proxyInventory.setStackInSlot(slot, proxyInventory.getStackInSlot(slot).getCraftingRemainingItem());
@@ -386,8 +396,9 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
             return;
         }
 
-        boilingTicks += SPEED_MULTIPLIER;
-        if (boilingTicks == SPEED_MULTIPLIER)
+        final int speed = getCookingSpeedMultiplier();
+        boilingTicks += speed;
+        if (boilingTicks == speed)
         {
             markForSync();
         }
@@ -417,13 +428,12 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
 
     private void finishSugarWaterRecipe()
     {
-        consumeOneSweetener();
-
         final Fluid fluid = ForgeRegistries.FLUIDS.getValue(FIRMA_LIFE_SUGAR_WATER);
-        if (fluid != null)
+        final int amount = getSugarWaterConversionAmount();
+        if (fluid != null && amount > 0)
         {
-            inventory.getFluidHandler().drain(Integer.MAX_VALUE, IFluidHandler.FluidAction.EXECUTE);
-            inventory.setFluid(new FluidStack(fluid, FluidHelpers.BUCKET_VOLUME));
+            consumeSweeteners(amount / SUGAR_WATER_AMOUNT);
+            inventory.setFluid(new FluidStack(fluid, amount));
         }
 
         output = null;
@@ -439,7 +449,7 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
             return PotRecipe.Output.read(new CompoundTag());
         }
 
-        inventory.getFluidHandler().drain(Integer.MAX_VALUE, IFluidHandler.FluidAction.EXECUTE);
+        inventory.getFluidHandler().drain(SUGAR_WATER_AMOUNT, IFluidHandler.FluidAction.EXECUTE);
         int remaining = batch.count;
         for (int slot = SLOT_EXTRA_INPUT_START; slot <= SLOT_EXTRA_INPUT_END && remaining > 0; slot++)
         {
@@ -472,13 +482,33 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
 
     private boolean matchesSugarWaterRecipe()
     {
+        return getSugarWaterConversionAmount() > 0 && ForgeRegistries.FLUIDS.containsKey(FIRMA_LIFE_SUGAR_WATER);
+    }
+
+    private boolean matchesSugarWaterJamRecipe()
+    {
         final FluidStack fluid = inventory.getFluidInTank(0);
-        if (fluid.getAmount() < FluidHelpers.BUCKET_VOLUME || !fluid.getFluid().isSame(Fluids.WATER))
+        return fluid.getAmount() >= SUGAR_WATER_AMOUNT
+            && isSugarWaterFluid(fluid)
+            && getSingleFruitBatch() != null;
+    }
+
+    private int getSugarWaterConversionAmount()
+    {
+        final FluidStack fluid = inventory.getFluidInTank(0);
+        if (fluid.getAmount() < SUGAR_WATER_AMOUNT || fluid.getAmount() % SUGAR_WATER_AMOUNT != 0 || !fluid.getFluid().isSame(Fluids.WATER))
         {
-            return false;
+            return 0;
         }
 
-        boolean foundSweetener = false;
+        final int sweetenerCount = countSweeteners();
+        final int requiredSweeteners = fluid.getAmount() / SUGAR_WATER_AMOUNT;
+        return sweetenerCount >= requiredSweeteners ? fluid.getAmount() : 0;
+    }
+
+    private int countSweeteners()
+    {
+        int count = 0;
         for (int slot = SLOT_EXTRA_INPUT_START; slot <= SLOT_EXTRA_INPUT_END; slot++)
         {
             final ItemStack stack = inventory.getStackInSlot(slot);
@@ -488,31 +518,28 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
             }
             if (!net.dries007.tfc.util.Helpers.isItem(stack, SWEETENER))
             {
-                return false;
+                return -1;
             }
-            foundSweetener = true;
+            count += stack.getCount();
         }
-        return foundSweetener && ForgeRegistries.FLUIDS.containsKey(FIRMA_LIFE_SUGAR_WATER);
+        return count;
     }
 
-    private boolean matchesSugarWaterJamRecipe()
-    {
-        final FluidStack fluid = inventory.getFluidInTank(0);
-        return fluid.getAmount() >= FluidHelpers.BUCKET_VOLUME
-            && isSugarWaterFluid(fluid)
-            && getSingleFruitBatch() != null;
-    }
-
-    private void consumeOneSweetener()
+    private void consumeSweeteners(int amount)
     {
         for (int slot = SLOT_EXTRA_INPUT_START; slot <= SLOT_EXTRA_INPUT_END; slot++)
         {
             final ItemStack stack = inventory.getStackInSlot(slot);
             if (!stack.isEmpty() && net.dries007.tfc.util.Helpers.isItem(stack, SWEETENER))
             {
-                stack.shrink(1);
+                final int consumed = Math.min(stack.getCount(), amount);
+                stack.shrink(consumed);
                 inventory.setStackInSlot(slot, stack);
-                return;
+                amount -= consumed;
+                if (amount <= 0)
+                {
+                    return;
+                }
             }
         }
     }
@@ -729,7 +756,12 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
 
     public boolean shouldRenderAsBoiling()
     {
-        return boilingTicks > 0;
+        return isBoiling() || boilingTicks > 0 || preBoilingTicks > 0;
+    }
+
+    private int getCookingSpeedMultiplier()
+    {
+        return getBlockState().getValue(com.tfcelectriccooking.common.block.ElectricSoupPotBlock.OPEN) ? 1 : SPEED_MULTIPLIER;
     }
 
     public @Nullable PotRecipe.Output getOutput()

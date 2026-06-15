@@ -121,9 +121,9 @@ public final class TFCElectricCookingJEIPlugin implements IModPlugin
         recipes.add(new ElectricSoupPotRecipe(
             Component.translatable("tfcelectriccooking.jei.sugar_water"),
             List.of(Ingredient.of(SWEETENER)),
-            new FluidStack(Fluids.WATER, 1000),
+            new FluidStack(Fluids.WATER, 500),
             List.of(),
-            new FluidStack(sugarWater, 1000)
+            new FluidStack(sugarWater, 500)
         ));
 
         Helpers.allItems(FRUITS).forEach(foodItem -> addSugarWaterJamRecipes(recipes, sugarWater, foodItem));
@@ -156,7 +156,7 @@ public final class TFCElectricCookingJEIPlugin implements IModPlugin
             recipes.add(new ElectricSoupPotRecipe(
                 Component.translatable("tfcelectriccooking.jei.sugar_water_jam"),
                 ingredients,
-                new FluidStack(sugarWater, 1000),
+                new FluidStack(sugarWater, 500),
                 outputs,
                 FluidStack.EMPTY
             ));
