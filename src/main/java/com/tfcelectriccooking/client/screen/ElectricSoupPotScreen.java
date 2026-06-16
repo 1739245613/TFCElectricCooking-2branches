@@ -3,182 +3,101 @@ package com.tfcelectriccooking.client.screen;
 import com.tfcelectriccooking.TFCElectricCooking;
 import com.tfcelectriccooking.common.blockentity.ElectricSoupPotBlockEntity;
 import com.tfcelectriccooking.common.container.ElectricSoupPotContainer;
+import java.util.ArrayList;
+import java.util.List;
+import net.dries007.tfc.client.RenderHelpers;
+import net.dries007.tfc.common.capabilities.heat.Heat;
+import net.dries007.tfc.common.fluids.FluidHelpers;
+import net.dries007.tfc.common.recipes.PotRecipe;
+import net.dries007.tfc.compat.jade.common.BlockEntityTooltip;
+import net.dries007.tfc.config.TFCConfig;
+import net.dries007.tfc.util.Tooltips;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraftforge.fluids.FluidStack;
 
 public class ElectricSoupPotScreen extends AbstractContainerScreen<ElectricSoupPotContainer>
 {
     private static final ResourceLocation BACKGROUND = new ResourceLocation(TFCElectricCooking.MOD_ID, "textures/gui/electric_soup_pot.png");
-    private static final int SLOT_SIZE = 18;
-    private static final int CONTROL_X = 8;
-    private static final int INPUT_Y = 68;
-    private static final int BUTTON_Y = 86;
-    private static final int OUTPUT_SOUP_COLOR = 0xFFB85C24;
-    private static final int TEMPERATURE_PANEL_X = 21;
-    private static final int TEMPERATURE_PANEL_Y = 21;
-    private static final int TEMPERATURE_PANEL_WIDTH = 14;
-    private static final int TEMPERATURE_PANEL_HEIGHT = 44;
-    private static final int TEMPERATURE_BAR_X = TEMPERATURE_PANEL_X + 4;
-    private static final int TEMPERATURE_BAR_WIDTH = 6;
-    private static final int TEMPERATURE_BAR_BOTTOM = TEMPERATURE_PANEL_Y + TEMPERATURE_PANEL_HEIGHT - 3;
-    private static final int TEMPERATURE_BAR_MAX_HEIGHT = 34;
-    private static final int TEMPERATURE_TEXT_Y = 12;
-    private static final int STATUS_TEXT_RIGHT_PADDING = 8;
+    private static final ResourceLocation TFC_FIREPIT = new ResourceLocation("tfc", "textures/gui/fire_pit.png");
 
-    private EditBox temperatureInput;
+    private static final int GUI_WIDTH = 176;
+    private static final int GUI_HEIGHT = 186;
+    private static final int POWER_ON_TEMPERATURE = 350;
+
+    private static final int POWER_BUTTON_X = 8;
+    private static final int POWER_BUTTON_Y = 80;
+    private static final int POWER_BUTTON_WIDTH = 17;
+    private static final int POWER_BUTTON_HEIGHT = 17;
+
+    private static final int TEMPERATURE_X = 8;
+    private static final int TEMPERATURE_Y = 23;
+    private static final int TEMPERATURE_WIDTH = 17;
+    private static final int TEMPERATURE_HEIGHT = 62;
+    private static final int TEMPERATURE_MARKER_X = 9;
+    private static final int TEMPERATURE_MARKER_BOTTOM = 74;
+
+    private static final int ENERGY_X = 150;
+    private static final int ENERGY_Y = 16;
+    private static final int ENERGY_WIDTH = 17;
+    private static final int ENERGY_HEIGHT = 62;
+    private static final int ENERGY_FILL_X = 155;
+    private static final int ENERGY_FILL_Y = 21;
+    private static final int ENERGY_FILL_WIDTH = 7;
+    private static final int ENERGY_FILL_HEIGHT = 52;
+    private static final int ENERGY_FILL_SRC_X = 213;
+    private static final int ENERGY_FILL_SRC_Y = 4;
+
+    private static final int POT_CONTENT_X = 102;
+    private static final int POT_CONTENT_Y = 39;
+    private static final int POT_CONTENT_WIDTH = 38;
+    private static final int POT_CONTENT_HEIGHT = 34;
+    private static final int POT_CONTENT_SRC_X = 218;
+    private static final int POT_CONTENT_SRC_Y = 95;
+    private static final int POT_CONTENT_VISIBLE_HEIGHT = 24;
+    private static final int POT_CONTENT_STEPS = 10;
+
+    private static final int BUBBLES_X = 109;
+    private static final int BUBBLES_Y = 16;
+    private static final int BUBBLES_WIDTH = 28;
+    private static final int BUBBLES_HEIGHT = 22;
+
+    private static final int OUTPUT_TEXT_CENTER_X = 120;
+    private static final int OUTPUT_TEXT_Y = 79;
+    private static final int OUTPUT_TEXT_MAX_WIDTH = 78;
 
     public ElectricSoupPotScreen(ElectricSoupPotContainer container, Inventory playerInv, Component title)
     {
         super(container, playerInv, title);
-        imageWidth = 176;
-        imageHeight = 196;
+        imageWidth = GUI_WIDTH;
+        imageHeight = GUI_HEIGHT;
         inventoryLabelY = imageHeight - 94;
-    }
-
-    @Override
-    protected void init()
-    {
-        super.init();
-
-        temperatureInput = new EditBox(font, leftPos + CONTROL_X, topPos + INPUT_Y, 40, 14, Component.empty());
-        temperatureInput.setMaxLength(3);
-        temperatureInput.setValue(String.valueOf(menu.getBlockEntity().getSyncData().get(1)));
-        temperatureInput.setTextColor(0xFFFFFF);
-        addRenderableWidget(temperatureInput);
-
-        addRenderableWidget(Button.builder(Component.translatable("tfcelectriccooking.gui.set"), button -> sendTemperature())
-            .bounds(leftPos + CONTROL_X, topPos + BUTTON_Y, 40, 12)
-            .build());
-    }
-
-    private void sendTemperature()
-    {
-        if (minecraft == null || minecraft.player == null || minecraft.gameMode == null)
-        {
-            return;
-        }
-
-        try
-        {
-            int temp = Integer.parseInt(temperatureInput.getValue().trim());
-            temp = Math.max(0, Math.min(ElectricSoupPotBlockEntity.MAX_TEMPERATURE, temp));
-            temperatureInput.setValue(String.valueOf(temp));
-            if (menu.clickMenuButton(minecraft.player, temp))
-            {
-                minecraft.gameMode.handleInventoryButtonClick(menu.containerId, temp);
-            }
-        }
-        catch (NumberFormatException ignored)
-        {
-            temperatureInput.setValue("0");
-        }
-    }
-
-    @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers)
-    {
-        if (keyCode == 257 && temperatureInput.isFocused())
-        {
-            sendTemperature();
-            return true;
-        }
-        if (temperatureInput.isFocused())
-        {
-            return temperatureInput.keyPressed(keyCode, scanCode, modifiers);
-        }
-        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY)
     {
         graphics.blit(BACKGROUND, leftPos, topPos, 0, 0, imageWidth, imageHeight);
-
-        drawSlot(graphics, leftPos + 64, topPos + 22);
-        drawSlot(graphics, leftPos + 82, topPos + 22);
-        drawSlot(graphics, leftPos + 55, topPos + 40);
-        drawSlot(graphics, leftPos + 73, topPos + 40);
-        drawSlot(graphics, leftPos + 91, topPos + 40);
-
-        final int temp = menu.getBlockEntity().getSyncData().get(0);
-        drawPanel(graphics, leftPos + TEMPERATURE_PANEL_X, topPos + TEMPERATURE_PANEL_Y, TEMPERATURE_PANEL_WIDTH, TEMPERATURE_PANEL_HEIGHT);
-        final int barHeight = Math.min(TEMPERATURE_BAR_MAX_HEIGHT, (int) (TEMPERATURE_BAR_MAX_HEIGHT * temp / (float) ElectricSoupPotBlockEntity.MAX_TEMPERATURE));
-        if (barHeight > 0)
-        {
-            graphics.fill(leftPos + TEMPERATURE_BAR_X, topPos + TEMPERATURE_BAR_BOTTOM - barHeight, leftPos + TEMPERATURE_BAR_X + TEMPERATURE_BAR_WIDTH, topPos + TEMPERATURE_BAR_BOTTOM, 0xFFFF7A1A);
-        }
-
-        renderFluidArea(graphics);
-    }
-
-    private void renderFluidArea(GuiGraphics graphics)
-    {
-        final int fluidAreaX = leftPos + 121;
-        final int fluidAreaY = topPos + 20;
-        final int fluidAreaW = 34;
-        final int fluidAreaH = 44;
-        final int progress = menu.getBlockEntity().getSyncData().get(3);
-        final int total = menu.getBlockEntity().getSyncData().get(4);
-        final boolean hasOutput = menu.getBlockEntity().getSyncData().get(5) > 0;
-        final FluidStack fluid = menu.getBlockEntity().getFluidInTank();
-
-        drawPanel(graphics, fluidAreaX, fluidAreaY, fluidAreaW, fluidAreaH);
-
-        if (hasOutput)
-        {
-            graphics.fill(fluidAreaX + 3, fluidAreaY + 24, fluidAreaX + fluidAreaW - 3, fluidAreaY + fluidAreaH - 3, OUTPUT_SOUP_COLOR);
-        }
-        else if (!fluid.isEmpty() || total > 0)
-        {
-            graphics.fill(fluidAreaX + 3, fluidAreaY + 24, fluidAreaX + fluidAreaW - 3, fluidAreaY + fluidAreaH - 3, 0xFF4A90E2);
-            if (progress > 0)
-            {
-                final int tick = (int) (System.currentTimeMillis() / 100L) % 20;
-                for (int i = 0; i < 3; i++)
-                {
-                    final int bubbleX = fluidAreaX + 6 + i * 8;
-                    final int bubbleY = fluidAreaY + 30 - ((tick + i * 5) % 10);
-                    graphics.fill(bubbleX, bubbleY, bubbleX + 2, bubbleY + 2, 0xCCFFFFFF);
-                }
-            }
-        }
-
-        drawPanel(graphics, leftPos + 121, topPos + 68, 34, 8);
-        final int progressWidth = hasOutput ? 30 : total > 0 ? Math.min(30, Math.round(progress * 30f / total)) : 0;
-        if (progressWidth > 0)
-        {
-            graphics.fill(leftPos + 123, topPos + 70, leftPos + 123 + progressWidth, topPos + 74, hasOutput ? OUTPUT_SOUP_COLOR : 0xFF4CAF50);
-        }
+        drawTemperature(graphics);
+        drawEnergy(graphics);
+        drawPowerButton(graphics);
+        drawPotContents(graphics);
+        drawBubbles(graphics);
     }
 
     @Override
     protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY)
     {
-        final int currentTemp = menu.getBlockEntity().getSyncData().get(0);
-        final int recipeTemperature = menu.getBlockEntity().getSyncData().get(6);
-        final boolean hasOutput = menu.getBlockEntity().getSyncData().get(5) > 0;
-        final String temperatureText = currentTemp + "\u00B0C";
-
-        graphics.drawString(font, title, (imageWidth - font.width(title)) / 2, 6, 0x404040, false);
-        graphics.drawString(font, temperatureText, getTemperatureCenterX() - font.width(temperatureText) / 2, TEMPERATURE_TEXT_Y, 0xD96817, false);
-
-        final Component status = hasOutput
-            ? Component.translatable("tfcelectriccooking.gui.done")
-            : recipeTemperature > 0 ? Component.translatable("tfcelectriccooking.gui.boiling_at", recipeTemperature) : Component.translatable("tfcelectriccooking.gui.idle");
-        final int statusX = hasOutput || recipeTemperature <= 0
-            ? 121 + (34 - font.width(status)) / 2
-            : imageWidth - STATUS_TEXT_RIGHT_PADDING - font.width(status);
-        graphics.drawString(font, status, statusX, 81, hasOutput ? OUTPUT_SOUP_COLOR : 0xD96817, false);
-
-        final int energy = menu.getBlockEntity().getSyncData().get(2);
-        final String energyText = energy + " FE";
-        graphics.drawString(font, energyText, 121 + (34 - font.width(energyText)) / 2, 93, 0x2E8B57, false);
+        final Component outputText = getOutputText();
+        if (!outputText.getString().isEmpty())
+        {
+            drawCenteredTrimmedString(graphics, outputText, OUTPUT_TEXT_CENTER_X, OUTPUT_TEXT_Y, OUTPUT_TEXT_MAX_WIDTH, 0x404040);
+        }
     }
 
     @Override
@@ -186,24 +105,281 @@ public class ElectricSoupPotScreen extends AbstractContainerScreen<ElectricSoupP
     {
         super.render(graphics, mouseX, mouseY, partialTick);
         renderTooltip(graphics, mouseX, mouseY);
+        renderCustomTooltips(graphics, mouseX, mouseY);
     }
 
-    private void drawSlot(GuiGraphics graphics, int x, int y)
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button)
     {
-        drawPanel(graphics, x, y, SLOT_SIZE, SLOT_SIZE);
+        if (button == 0 && isInside(mouseX, mouseY, POWER_BUTTON_X, POWER_BUTTON_Y, POWER_BUTTON_WIDTH, POWER_BUTTON_HEIGHT))
+        {
+            final int targetTemperature = menu.getBlockEntity().getSyncData().get(1);
+            sendTargetTemperature(targetTemperature > 0 ? 0 : POWER_ON_TEMPERATURE);
+            return true;
+        }
+        return super.mouseClicked(mouseX, mouseY, button);
     }
 
-    private int getTemperatureCenterX()
+    private void drawTemperature(GuiGraphics graphics)
     {
-        return TEMPERATURE_PANEL_X + TEMPERATURE_PANEL_WIDTH / 2;
+        graphics.blit(TFC_FIREPIT, leftPos + TEMPERATURE_X, topPos + TEMPERATURE_Y - 7, 29, 16, TEMPERATURE_WIDTH, 65);
+
+        final int temperature = menu.getBlockEntity().getSyncData().get(0);
+        if (temperature > 0)
+        {
+            final int markerY = TEMPERATURE_MARKER_BOTTOM - Math.min(51, Heat.scaleTemperatureForGui(temperature));
+            graphics.blit(TFC_FIREPIT, leftPos + TEMPERATURE_MARKER_X, topPos + markerY, 176, 0, 15, 5);
+        }
     }
 
-    private void drawPanel(GuiGraphics graphics, int x, int y, int width, int height)
+    private void drawEnergy(GuiGraphics graphics)
     {
-        graphics.fill(x, y, x + width, y + height, 0xFF000000);
-        graphics.fill(x + 1, y + 1, x + width - 1, y + height - 1, 0xFF8B8B8B);
-        graphics.fill(x + 1, y + 1, x + width - 2, y + height - 2, 0xFFC6C6C6);
-        graphics.fill(x + 2, y + 2, x + width - 1, y + height - 1, 0xFF555555);
-        graphics.fill(x + 2, y + 2, x + width - 2, y + height - 2, 0xFF171717);
+        graphics.blit(BACKGROUND, leftPos + ENERGY_X, topPos + ENERGY_Y, 221, 0, ENERGY_WIDTH, ENERGY_HEIGHT);
+
+        final int energy = menu.getBlockEntity().getSyncData().get(2);
+        final int fillHeight = Math.min(ENERGY_FILL_HEIGHT, Math.round(ENERGY_FILL_HEIGHT * energy / (float) ElectricSoupPotBlockEntity.ENERGY_CAPACITY));
+        if (fillHeight > 0)
+        {
+            final int sourceY = ENERGY_FILL_SRC_Y + (ENERGY_FILL_HEIGHT - fillHeight);
+            final int destY = ENERGY_FILL_Y + (ENERGY_FILL_HEIGHT - fillHeight);
+            graphics.blit(BACKGROUND, leftPos + ENERGY_FILL_X, topPos + destY, ENERGY_FILL_SRC_X, sourceY, ENERGY_FILL_WIDTH, fillHeight);
+        }
+    }
+
+    private void drawPowerButton(GuiGraphics graphics)
+    {
+        final int targetTemperature = menu.getBlockEntity().getSyncData().get(1);
+        graphics.blit(BACKGROUND, leftPos + POWER_BUTTON_X, topPos + POWER_BUTTON_Y, 239, targetTemperature > 0 ? 19 : 0, POWER_BUTTON_WIDTH, POWER_BUTTON_HEIGHT);
+    }
+
+    private void drawPotContents(GuiGraphics graphics)
+    {
+        final PotRecipe.Output output = menu.getBlockEntity().getOutput();
+        final FluidStack fluid = menu.getBlockEntity().getFluidInTank();
+
+        final int steps = getPotContentSteps(output, fluid);
+        if (steps > 0)
+        {
+            final int fillHeight = Math.max(1, Math.round(POT_CONTENT_VISIBLE_HEIGHT * steps / (float) POT_CONTENT_STEPS));
+            final int sourceY = POT_CONTENT_SRC_Y + POT_CONTENT_HEIGHT - fillHeight;
+            final int destY = POT_CONTENT_Y + POT_CONTENT_HEIGHT - fillHeight;
+            if (output != null && !output.isEmpty())
+            {
+                final int color = getFallbackPotContentColor(output, fluid);
+                if (color != -1)
+                {
+                    RenderHelpers.setShaderColor(graphics, color);
+                    graphics.blit(BACKGROUND, leftPos + POT_CONTENT_X, topPos + destY, POT_CONTENT_SRC_X, sourceY, POT_CONTENT_WIDTH, fillHeight);
+                    RenderHelpers.setShaderColor(graphics, 0xFFFFFFFF);
+                }
+            }
+            else if (!drawFluidPotContent(graphics, fluid, leftPos + POT_CONTENT_X, topPos + destY, POT_CONTENT_WIDTH, fillHeight))
+            {
+                final int color = getFallbackPotContentColor(output, fluid);
+                if (color != -1)
+                {
+                    RenderHelpers.setShaderColor(graphics, color);
+                    graphics.blit(BACKGROUND, leftPos + POT_CONTENT_X, topPos + destY, POT_CONTENT_SRC_X, sourceY, POT_CONTENT_WIDTH, fillHeight);
+                    RenderHelpers.setShaderColor(graphics, 0xFFFFFFFF);
+                }
+            }
+        }
+    }
+
+    private boolean drawFluidPotContent(GuiGraphics graphics, FluidStack fluid, int x, int y, int width, int height)
+    {
+        if (fluid.isEmpty())
+        {
+            return false;
+        }
+        try
+        {
+            final var sprite = RenderHelpers.getAndBindFluidSprite(fluid);
+            final int firstRow = y - (topPos + POT_CONTENT_Y);
+            for (int row = 0; row < height; row++)
+            {
+                final int sourceRow = firstRow + row;
+                final int[] bounds = getPotContentRowBounds(sourceRow);
+                final int rowWidth = bounds[1] - bounds[0] + 1;
+                if (rowWidth > 0)
+                {
+                    drawFluidSpriteRow(graphics, sprite, x + bounds[0], y + row, rowWidth, bounds[0], sourceRow);
+                }
+            }
+            RenderHelpers.setShaderColor(graphics, 0xFFFFFFFF);
+            return true;
+        }
+        catch (RuntimeException ignored)
+        {
+            RenderHelpers.setShaderColor(graphics, 0xFFFFFFFF);
+        }
+        return false;
+    }
+
+    private void drawFluidSpriteRow(GuiGraphics graphics, TextureAtlasSprite sprite, int x, int y, int width, int sourceX, int sourceY)
+    {
+        int remaining = width;
+        int destX = x;
+        int tileX = Math.floorMod(sourceX, 16);
+        final int tileY = Math.floorMod(sourceY, 16);
+
+        while (remaining > 0)
+        {
+            final int drawWidth = Math.min(remaining, 16 - tileX);
+            RenderHelpers.blit(
+                graphics,
+                destX,
+                y,
+                drawWidth,
+                1,
+                sprite.getU(tileX),
+                sprite.getU(tileX + drawWidth),
+                sprite.getV(tileY),
+                sprite.getV(tileY + 1)
+            );
+            destX += drawWidth;
+            remaining -= drawWidth;
+            tileX = 0;
+        }
+    }
+
+    private int[] getPotContentRowBounds(int row)
+    {
+        final int inset = Math.max(0, row - (POT_CONTENT_HEIGHT - 5));
+        return new int[] {inset, POT_CONTENT_WIDTH - 1 - inset};
+    }
+
+    private int getFallbackPotContentColor(PotRecipe.Output output, FluidStack fluid)
+    {
+        if (output != null && !output.isEmpty())
+        {
+            final int color = output.getFluidColor();
+            return color == -1 ? 0xFFB85C24 : color;
+        }
+        if (!fluid.isEmpty())
+        {
+            try
+            {
+                return RenderHelpers.getFluidColor(fluid);
+            }
+            catch (RuntimeException ignored)
+            {
+                return 0xFFFFFFFF;
+            }
+        }
+        return -1;
+    }
+
+    private void drawBubbles(GuiGraphics graphics)
+    {
+        final int temperature = menu.getBlockEntity().getSyncData().get(0);
+        final int progress = menu.getBlockEntity().getSyncData().get(3);
+        if (temperature < 301 && progress <= 0)
+        {
+            return;
+        }
+
+        final int bubbleHeight = Math.max(1, Math.min(22, (progress % 35) * 22 / 35));
+        final int sourceY = 66 + (22 - bubbleHeight);
+        final int destY = BUBBLES_Y + (22 - bubbleHeight);
+        graphics.blit(BACKGROUND, leftPos + BUBBLES_X, topPos + destY, 226, sourceY, BUBBLES_WIDTH, bubbleHeight);
+    }
+
+    private void sendTargetTemperature(int temperature)
+    {
+        if (minecraft == null || minecraft.player == null || minecraft.gameMode == null)
+        {
+            return;
+        }
+
+        final int clamped = Mth.clamp(temperature, 0, ElectricSoupPotBlockEntity.MAX_TEMPERATURE);
+        if (menu.clickMenuButton(minecraft.player, clamped))
+        {
+            minecraft.gameMode.handleInventoryButtonClick(menu.containerId, clamped);
+        }
+    }
+
+    private Component getOutputText()
+    {
+        return getRecipeOutputText();
+    }
+
+    private Component getRecipeOutputText()
+    {
+        final PotRecipe.Output output = menu.getBlockEntity().getOutput();
+        if (output != null && !output.isEmpty())
+        {
+            final BlockEntityTooltip tooltip = output.getTooltip();
+            if (tooltip != null && menu.getBlockEntity().getLevel() != null)
+            {
+                final List<Component> fakeTooltip = new ArrayList<>();
+                tooltip.display(menu.getBlockEntity().getLevel(), menu.getBlockEntity().getBlockState(), menu.getBlockEntity().getBlockPos(), menu.getBlockEntity(), fakeTooltip::add);
+                if (!fakeTooltip.isEmpty())
+                {
+                    return fakeTooltip.get(0);
+                }
+            }
+            return Component.translatable("tfcelectriccooking.gui.done");
+        }
+        return Component.empty();
+    }
+
+    private int getPotContentSteps(PotRecipe.Output output, FluidStack fluid)
+    {
+        if (output != null && !output.isEmpty())
+        {
+            return POT_CONTENT_STEPS;
+        }
+        if (!fluid.isEmpty())
+        {
+            return Mth.clamp((fluid.getAmount() + FluidHelpers.BUCKET_VOLUME / POT_CONTENT_STEPS - 1) / (FluidHelpers.BUCKET_VOLUME / POT_CONTENT_STEPS), 1, POT_CONTENT_STEPS);
+        }
+        return 0;
+    }
+
+    private void drawCenteredTrimmedString(GuiGraphics graphics, Component component, int centerX, int y, int maxWidth, int color)
+    {
+        String text = component.getString();
+        while (!text.isEmpty() && font.width(text) > maxWidth)
+        {
+            text = text.substring(0, text.length() - 1);
+        }
+        graphics.drawString(font, text, centerX - font.width(text) / 2, y, color, false);
+    }
+
+    private void renderCustomTooltips(GuiGraphics graphics, int mouseX, int mouseY)
+    {
+        if (isInside(mouseX, mouseY, POWER_BUTTON_X, POWER_BUTTON_Y, POWER_BUTTON_WIDTH, POWER_BUTTON_HEIGHT))
+        {
+            final int targetTemperature = menu.getBlockEntity().getSyncData().get(1);
+            graphics.renderTooltip(font, Component.translatable(targetTemperature > 0 ? "tfcelectriccooking.tooltip.running" : "tfcelectriccooking.tooltip.stopped"), mouseX, mouseY);
+        }
+        else if (isInside(mouseX, mouseY, TEMPERATURE_X, TEMPERATURE_Y, TEMPERATURE_WIDTH, TEMPERATURE_HEIGHT))
+        {
+            final var text = TFCConfig.CLIENT.heatTooltipStyle.get().formatColored(menu.getBlockEntity().getSyncData().get(0));
+            if (text != null)
+            {
+                graphics.renderTooltip(font, text, mouseX, mouseY);
+            }
+        }
+        else if (isInside(mouseX, mouseY, ENERGY_X, ENERGY_Y, ENERGY_WIDTH, ENERGY_HEIGHT))
+        {
+            final int energy = menu.getBlockEntity().getSyncData().get(2);
+            graphics.renderTooltip(font, Component.translatable("tfcelectriccooking.tooltip.energy", energy, ElectricSoupPotBlockEntity.ENERGY_CAPACITY), mouseX, mouseY);
+        }
+        else if (isInside(mouseX, mouseY, POT_CONTENT_X, POT_CONTENT_Y, POT_CONTENT_WIDTH, POT_CONTENT_HEIGHT))
+        {
+            final PotRecipe.Output output = menu.getBlockEntity().getOutput();
+            final FluidStack fluid = menu.getBlockEntity().getFluidInTank();
+            if ((output == null || output.isEmpty()) && !fluid.isEmpty())
+            {
+                graphics.renderTooltip(font, Tooltips.fluidUnitsAndCapacityOf(fluid, FluidHelpers.BUCKET_VOLUME), mouseX, mouseY);
+            }
+        }
+    }
+
+    private boolean isInside(double mouseX, double mouseY, int x, int y, int width, int height)
+    {
+        return RenderHelpers.isInside((int) mouseX, (int) mouseY, leftPos + x, topPos + y, width, height);
     }
 }

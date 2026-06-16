@@ -18,6 +18,8 @@
   "tfcelectriccooking.jei.sugar_water_jam": "Sugar Water Jam",
   "tfcelectriccooking.tooltip.energy": "%d / %d FE",
   "tfcelectriccooking.tooltip.target_temperature": "Target: %d\u00B0C",
+  "tfcelectriccooking.tooltip.running": "Running",
+  "tfcelectriccooking.tooltip.stopped": "Stopped",
   "tfcelectriccooking.tooltip.current_temperature": "Current: %d\u00B0C",
   "tfcelectriccooking.tooltip.temperature": "%d\u00B0C",
   "tfcelectriccooking.tooltip.food_trait.electric_oven_baked": "Electric Oven Baked"

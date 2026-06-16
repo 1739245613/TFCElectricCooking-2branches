@@ -3,136 +3,83 @@ package com.tfcelectriccooking.client.screen;
 import com.tfcelectriccooking.TFCElectricCooking;
 import com.tfcelectriccooking.common.blockentity.ElectricOvenBlockEntity;
 import com.tfcelectriccooking.common.container.ElectricOvenContainer;
+import net.dries007.tfc.client.RenderHelpers;
+import net.dries007.tfc.common.capabilities.heat.Heat;
+import net.dries007.tfc.config.TFCConfig;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Inventory;
 
 public class ElectricOvenScreen extends AbstractContainerScreen<ElectricOvenContainer>
 {
     private static final ResourceLocation BACKGROUND = new ResourceLocation(TFCElectricCooking.MOD_ID, "textures/gui/electric_oven.png");
-    private static final int SLOT_SIZE = 18;
-    private static final int CONTROL_X = 8;
-    private static final int INPUT_Y = 68;
-    private static final int BUTTON_Y = 86;
-    private static final int TEMPERATURE_PANEL_X = 21;
-    private static final int TEMPERATURE_PANEL_Y = 21;
-    private static final int TEMPERATURE_PANEL_WIDTH = 14;
-    private static final int TEMPERATURE_PANEL_HEIGHT = 44;
-    private static final int TEMPERATURE_BAR_X = TEMPERATURE_PANEL_X + 4;
-    private static final int TEMPERATURE_BAR_WIDTH = 6;
-    private static final int TEMPERATURE_BAR_BOTTOM = TEMPERATURE_PANEL_Y + TEMPERATURE_PANEL_HEIGHT - 3;
-    private static final int TEMPERATURE_BAR_MAX_HEIGHT = 34;
-    private static final int TEMPERATURE_TEXT_Y = 12;
+    private static final ResourceLocation TFC_FIREPIT = new ResourceLocation("tfc", "textures/gui/fire_pit.png");
 
-    private EditBox temperatureInput;
+    private static final int GUI_WIDTH = 176;
+    private static final int GUI_HEIGHT = 186;
+
+    private static final int TARGET_SLIDER_X = 8;
+    private static final int TARGET_SLIDER_Y = 21;
+    private static final int TARGET_SLIDER_WIDTH = 14;
+    private static final int TARGET_SLIDER_HEIGHT = 66;
+    private static final int TARGET_SLIDER_RANGE = 51;
+    private static final int TARGET_SLIDER_BOTTOM = 73;
+
+    private static final int TARGET_HANDLE_X = 9;
+    private static final int TARGET_HANDLE_Y = 22;
+    private static final int TARGET_HANDLE_WIDTH = 12;
+    private static final int TARGET_HANDLE_HEIGHT = 15;
+
+    private static final int TEMPERATURE_X = 25;
+    private static final int TEMPERATURE_Y = 28;
+    private static final int TEMPERATURE_WIDTH = 17;
+    private static final int TEMPERATURE_HEIGHT = 62;
+    private static final int TEMPERATURE_MARKER_X = 26;
+    private static final int TEMPERATURE_MARKER_BOTTOM = 79;
+
+    private static final int ENERGY_X = 150;
+    private static final int ENERGY_Y = 21;
+    private static final int ENERGY_WIDTH = 17;
+    private static final int ENERGY_HEIGHT = 62;
+    private static final int ENERGY_FILL_X = 155;
+    private static final int ENERGY_FILL_Y = 26;
+    private static final int ENERGY_FILL_WIDTH = 7;
+    private static final int ENERGY_FILL_HEIGHT = 52;
+
+    private static final int COIL_X = 67;
+    private static final int COIL_Y = 77;
+    private static final int COIL_WIDTH = 60;
+    private static final int COIL_HEIGHT = 14;
+
+    private boolean draggingTargetTemperature;
+    private int sliderTemperature;
 
     public ElectricOvenScreen(ElectricOvenContainer container, Inventory playerInv, Component title)
     {
         super(container, playerInv, title);
-        imageWidth = 176;
-        imageHeight = 196;
+        imageWidth = GUI_WIDTH;
+        imageHeight = GUI_HEIGHT;
         inventoryLabelY = imageHeight - 94;
-    }
-
-    @Override
-    protected void init()
-    {
-        super.init();
-
-        temperatureInput = new EditBox(font, leftPos + CONTROL_X, topPos + INPUT_Y, 40, 14, Component.empty());
-        temperatureInput.setMaxLength(3);
-        temperatureInput.setValue(String.valueOf(menu.getBlockEntity().getSyncData().get(1)));
-        temperatureInput.setTextColor(0xFFFFFF);
-        addRenderableWidget(temperatureInput);
-
-        addRenderableWidget(Button.builder(Component.translatable("tfcelectriccooking.gui.set"), button -> sendTemperature())
-            .bounds(leftPos + CONTROL_X, topPos + BUTTON_Y, 40, 12)
-            .build());
-    }
-
-    private void sendTemperature()
-    {
-        if (minecraft == null || minecraft.player == null || minecraft.gameMode == null)
-        {
-            return;
-        }
-
-        try
-        {
-            int temp = Integer.parseInt(temperatureInput.getValue().trim());
-            temp = Math.max(0, Math.min(ElectricOvenBlockEntity.MAX_TEMPERATURE, temp));
-            temperatureInput.setValue(String.valueOf(temp));
-            if (menu.clickMenuButton(minecraft.player, temp))
-            {
-                minecraft.gameMode.handleInventoryButtonClick(menu.containerId, temp);
-            }
-        }
-        catch (NumberFormatException ignored)
-        {
-            temperatureInput.setValue("0");
-        }
-    }
-
-    @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers)
-    {
-        if (keyCode == 257 && temperatureInput.isFocused())
-        {
-            sendTemperature();
-            return true;
-        }
-        if (temperatureInput.isFocused())
-        {
-            return temperatureInput.keyPressed(keyCode, scanCode, modifiers);
-        }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        sliderTemperature = container.getBlockEntity().getSyncData().get(1);
     }
 
     @Override
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY)
     {
         graphics.blit(BACKGROUND, leftPos, topPos, 0, 0, imageWidth, imageHeight);
-
-        for (int row = 0; row < 2; row++)
-        {
-            for (int col = 0; col < 3; col++)
-            {
-                drawSlot(graphics, leftPos + 70 + col * SLOT_SIZE, topPos + 23 + row * SLOT_SIZE);
-            }
-        }
-
-        final int temp = menu.getBlockEntity().getSyncData().get(0);
-        drawPanel(graphics, leftPos + TEMPERATURE_PANEL_X, topPos + TEMPERATURE_PANEL_Y, TEMPERATURE_PANEL_WIDTH, TEMPERATURE_PANEL_HEIGHT);
-        final int barHeight = Math.min(TEMPERATURE_BAR_MAX_HEIGHT, (int) (TEMPERATURE_BAR_MAX_HEIGHT * temp / (float) ElectricOvenBlockEntity.MAX_TEMPERATURE));
-        if (barHeight > 0)
-        {
-            graphics.fill(leftPos + TEMPERATURE_BAR_X, topPos + TEMPERATURE_BAR_BOTTOM - barHeight, leftPos + TEMPERATURE_BAR_X + TEMPERATURE_BAR_WIDTH, topPos + TEMPERATURE_BAR_BOTTOM, 0xFFFF7A1A);
-        }
-
-        final int energy = menu.getBlockEntity().getSyncData().get(2);
-        drawPanel(graphics, leftPos + 153, topPos + 23, 12, 48);
-        final int energyBarHeight = Math.min(44, (int) (44f * energy / ElectricOvenBlockEntity.ENERGY_CAPACITY));
-        if (energyBarHeight > 0)
-        {
-            graphics.fill(leftPos + 155, topPos + 69 - energyBarHeight, leftPos + 163, topPos + 69, 0xFF4CAF50);
-        }
+        drawTargetSlider(graphics);
+        drawTemperature(graphics);
+        drawEnergy(graphics);
+        drawCoil(graphics);
     }
 
     @Override
     protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY)
     {
-        final int currentTemp = menu.getBlockEntity().getSyncData().get(0);
-        final String temperatureText = currentTemp + "\u00B0C";
-        graphics.drawString(font, title, (imageWidth - font.width(title)) / 2, 6, 0x404040, false);
-        graphics.drawString(font, temperatureText, getTemperatureCenterX() - font.width(temperatureText) / 2, TEMPERATURE_TEXT_Y, 0xD96817, false);
-
-        final int energy = menu.getBlockEntity().getSyncData().get(2);
-        final String energyText = energy + " FE";
-        graphics.drawString(font, energyText, imageWidth - 8 - font.width(energyText), 76, 0x2E8B57, false);
+        // The art uses no persistent labels.
     }
 
     @Override
@@ -140,24 +87,130 @@ public class ElectricOvenScreen extends AbstractContainerScreen<ElectricOvenCont
     {
         super.render(graphics, mouseX, mouseY, partialTick);
         renderTooltip(graphics, mouseX, mouseY);
+        renderCustomTooltips(graphics, mouseX, mouseY);
     }
 
-    private void drawSlot(GuiGraphics graphics, int x, int y)
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button)
     {
-        drawPanel(graphics, x, y, SLOT_SIZE, SLOT_SIZE);
+        if (button == 0 && isInside(mouseX, mouseY, TARGET_SLIDER_X, TARGET_SLIDER_Y, TARGET_SLIDER_WIDTH, TARGET_SLIDER_HEIGHT))
+        {
+            draggingTargetTemperature = true;
+            updateSliderTemperature(mouseY);
+            return true;
+        }
+        return super.mouseClicked(mouseX, mouseY, button);
     }
 
-    private int getTemperatureCenterX()
+    @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY)
     {
-        return TEMPERATURE_PANEL_X + TEMPERATURE_PANEL_WIDTH / 2;
+        if (button == 0 && draggingTargetTemperature)
+        {
+            updateSliderTemperature(mouseY);
+            return true;
+        }
+        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
     }
 
-    private void drawPanel(GuiGraphics graphics, int x, int y, int width, int height)
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button)
     {
-        graphics.fill(x, y, x + width, y + height, 0xFF000000);
-        graphics.fill(x + 1, y + 1, x + width - 1, y + height - 1, 0xFF8B8B8B);
-        graphics.fill(x + 1, y + 1, x + width - 2, y + height - 2, 0xFFC6C6C6);
-        graphics.fill(x + 2, y + 2, x + width - 1, y + height - 1, 0xFF555555);
-        graphics.fill(x + 2, y + 2, x + width - 2, y + height - 2, 0xFF171717);
+        if (button == 0 && draggingTargetTemperature)
+        {
+            draggingTargetTemperature = false;
+            sendTargetTemperature(sliderTemperature);
+            return true;
+        }
+        return super.mouseReleased(mouseX, mouseY, button);
+    }
+
+    private void drawTargetSlider(GuiGraphics graphics)
+    {
+        graphics.blit(BACKGROUND, leftPos + TARGET_SLIDER_X, topPos + TARGET_SLIDER_Y, 242, 39, TARGET_SLIDER_WIDTH, TARGET_SLIDER_HEIGHT);
+
+        final int targetTemperature = draggingTargetTemperature ? sliderTemperature : menu.getBlockEntity().getSyncData().get(1);
+        final int handleY = TARGET_SLIDER_BOTTOM - Math.round(TARGET_SLIDER_RANGE * targetTemperature / (float) ElectricOvenBlockEntity.MAX_TEMPERATURE);
+        graphics.blit(BACKGROUND, leftPos + TARGET_HANDLE_X, topPos + handleY, 228, 40, TARGET_HANDLE_WIDTH, TARGET_HANDLE_HEIGHT);
+    }
+
+    private void drawTemperature(GuiGraphics graphics)
+    {
+        graphics.blit(TFC_FIREPIT, leftPos + TEMPERATURE_X, topPos + TEMPERATURE_Y - 7, 29, 16, TEMPERATURE_WIDTH, 65);
+
+        final int temperature = menu.getBlockEntity().getSyncData().get(0);
+        final int markerY = TEMPERATURE_MARKER_BOTTOM - Math.min(TARGET_SLIDER_RANGE, Heat.scaleTemperatureForGui(temperature));
+        if (temperature > 0)
+        {
+            graphics.blit(TFC_FIREPIT, leftPos + TEMPERATURE_MARKER_X, topPos + markerY, 176, 0, 15, 5);
+        }
+    }
+
+    private void drawEnergy(GuiGraphics graphics)
+    {
+        graphics.blit(BACKGROUND, leftPos + ENERGY_X, topPos + ENERGY_Y, 208, 39, ENERGY_WIDTH, ENERGY_HEIGHT);
+
+        final int energy = menu.getBlockEntity().getSyncData().get(2);
+        final int fillHeight = Math.min(ENERGY_FILL_HEIGHT, Math.round(ENERGY_FILL_HEIGHT * energy / (float) ElectricOvenBlockEntity.ENERGY_CAPACITY));
+        if (fillHeight > 0)
+        {
+            final int sourceY = 44 + (ENERGY_FILL_HEIGHT - fillHeight);
+            final int destY = ENERGY_FILL_Y + (ENERGY_FILL_HEIGHT - fillHeight);
+            graphics.blit(BACKGROUND, leftPos + ENERGY_FILL_X, topPos + destY, 195, sourceY, ENERGY_FILL_WIDTH, fillHeight);
+        }
+    }
+
+    private void drawCoil(GuiGraphics graphics)
+    {
+        final boolean running = menu.getBlockEntity().getSyncData().get(1) > 0;
+        graphics.blit(BACKGROUND, leftPos + COIL_X, topPos + COIL_Y, 193, running ? 19 : 0, COIL_WIDTH, COIL_HEIGHT);
+    }
+
+    private void updateSliderTemperature(double mouseY)
+    {
+        final int relative = Mth.clamp(TARGET_SLIDER_BOTTOM - (int) Math.round(mouseY - topPos), 0, TARGET_SLIDER_RANGE);
+        sliderTemperature = Math.round(relative * ElectricOvenBlockEntity.MAX_TEMPERATURE / (float) TARGET_SLIDER_RANGE);
+    }
+
+    private void sendTargetTemperature(int temperature)
+    {
+        if (minecraft == null || minecraft.player == null || minecraft.gameMode == null)
+        {
+            return;
+        }
+
+        final int clamped = Mth.clamp(temperature, 0, ElectricOvenBlockEntity.MAX_TEMPERATURE);
+        sliderTemperature = clamped;
+        if (menu.clickMenuButton(minecraft.player, clamped))
+        {
+            minecraft.gameMode.handleInventoryButtonClick(menu.containerId, clamped);
+        }
+    }
+
+    private void renderCustomTooltips(GuiGraphics graphics, int mouseX, int mouseY)
+    {
+        if (isInside(mouseX, mouseY, TARGET_SLIDER_X, TARGET_SLIDER_Y, TARGET_SLIDER_WIDTH, TARGET_SLIDER_HEIGHT))
+        {
+            final int targetTemperature = draggingTargetTemperature ? sliderTemperature : menu.getBlockEntity().getSyncData().get(1);
+            graphics.renderTooltip(font, Component.translatable("tfcelectriccooking.tooltip.target_temperature", targetTemperature), mouseX, mouseY);
+        }
+        else if (isInside(mouseX, mouseY, TEMPERATURE_X, TEMPERATURE_Y, TEMPERATURE_WIDTH, TEMPERATURE_HEIGHT))
+        {
+            final var text = TFCConfig.CLIENT.heatTooltipStyle.get().formatColored(menu.getBlockEntity().getSyncData().get(0));
+            if (text != null)
+            {
+                graphics.renderTooltip(font, text, mouseX, mouseY);
+            }
+        }
+        else if (isInside(mouseX, mouseY, ENERGY_X, ENERGY_Y, ENERGY_WIDTH, ENERGY_HEIGHT))
+        {
+            final int energy = menu.getBlockEntity().getSyncData().get(2);
+            graphics.renderTooltip(font, Component.translatable("tfcelectriccooking.tooltip.energy", energy, ElectricOvenBlockEntity.ENERGY_CAPACITY), mouseX, mouseY);
+        }
+    }
+
+    private boolean isInside(double mouseX, double mouseY, int x, int y, int width, int height)
+    {
+        return RenderHelpers.isInside((int) mouseX, (int) mouseY, leftPos + x, topPos + y, width, height);
     }
 }

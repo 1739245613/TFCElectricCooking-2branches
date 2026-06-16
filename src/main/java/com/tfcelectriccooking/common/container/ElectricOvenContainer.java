@@ -31,7 +31,7 @@ public class ElectricOvenContainer extends BlockEntityContainer<ElectricOvenBloc
             {
                 for (int col = 0; col < 3; col++)
                 {
-                    addSlot(new CallbackSlot(blockEntity, handler, row * 3 + col, 71 + col * 18, 24 + row * 18));
+                    addSlot(new CallbackSlot(blockEntity, handler, row * 3 + col, 71 + col * 18, 32 + row * 22));
                 }
             }
         });

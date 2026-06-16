@@ -33,6 +33,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.IntTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
@@ -158,6 +159,7 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
             {
                 case 0 -> temperature = value;
                 case 1 -> targetTemperature = Math.max(0, Math.min(MAX_TEMPERATURE, value));
+                case 2 -> setSyncedEnergy(value);
                 case 3 -> syncedUiProgress = value;
                 case 4 -> syncedUiProgressTotal = value;
                 case 5 -> syncedUiHasOutput = value;
@@ -180,8 +182,8 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
             PotInventory::new,
             Component.translatable("block.tfcelectriccooking.electric_soup_pot"));
 
-        automationInventory = new AutomationItemHandler(inventory.getItemHandler(), this::canAutomationInsertItem, this::canAutomationExtractItem);
-        automationFluidInventory = new AutomationFluidHandler(inventory.getFluidHandler(), this::canAutomationFillFluid, this::canAutomationDrainFluid);
+        automationInventory = new AutomationItemHandler(inventory.getItemHandler(), this::canAutomationInsertItem, this::canAutomationExtractItem, this::syncAutomationChange);
+        automationFluidInventory = new AutomationFluidHandler(inventory.getFluidHandler(), this::canAutomationFillFluid, this::canAutomationDrainFluid, this::syncAutomationChange);
         automationItemCapability = LazyOptional.of(() -> automationInventory);
         automationFluidCapability = LazyOptional.of(() -> automationFluidInventory);
 
@@ -195,6 +197,19 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
             .on(new PartialFluidHandler(inventory).extract(), Direction.Plane.HORIZONTAL);
 
         recipeProxy = new RecipeProxyPotBlockEntity(pos, state);
+    }
+
+    private void setSyncedEnergy(int energy)
+    {
+        energyStorage.deserializeNBT(IntTag.valueOf(Math.max(0, Math.min(ENERGY_CAPACITY, energy))));
+    }
+
+    private void syncAutomationChange()
+    {
+        setChanged();
+        needsRecipeUpdate = true;
+        cleanupOutputState();
+        markForSync();
     }
 
     public void serverTick()

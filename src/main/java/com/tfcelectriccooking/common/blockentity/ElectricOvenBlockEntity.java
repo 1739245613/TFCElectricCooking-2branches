@@ -12,6 +12,7 @@ import net.dries007.tfc.common.capabilities.heat.HeatCapability;
 import net.dries007.tfc.common.capabilities.heat.IHeat;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.IntTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -91,6 +92,7 @@ public class ElectricOvenBlockEntity extends TickableInventoryBlockEntity<Invent
             {
                 case 0 -> temperature = value;
                 case 1 -> targetTemperature = Math.max(0, Math.min(MAX_TEMPERATURE, value));
+                case 2 -> setSyncedEnergy(value);
                 default -> {
                 }
             }
@@ -108,8 +110,19 @@ public class ElectricOvenBlockEntity extends TickableInventoryBlockEntity<Invent
         super(ModBlocks.ELECTRIC_OVEN_BLOCK_ENTITY.get(), pos, state,
             self -> new InventoryItemHandler(self, SLOTS),
             Component.translatable("block.tfcelectriccooking.electric_oven"));
-        automationInventory = new AutomationItemHandler(inventory, this::canAutomationInsert, this::canAutomationExtract);
+        automationInventory = new AutomationItemHandler(inventory, this::canAutomationInsert, this::canAutomationExtract, this::syncAutomationChange);
         automationItemCapability = LazyOptional.of(() -> automationInventory);
+    }
+
+    private void setSyncedEnergy(int energy)
+    {
+        energyStorage.deserializeNBT(IntTag.valueOf(Math.max(0, Math.min(ENERGY_CAPACITY, energy))));
+    }
+
+    private void syncAutomationChange()
+    {
+        setChanged();
+        markForSync();
     }
 
     public void serverTick()
@@ -259,6 +272,7 @@ public class ElectricOvenBlockEntity extends TickableInventoryBlockEntity<Invent
         }
         super.setAndUpdateSlots(slot);
         needsRecipeUpdate = true;
+        markForSync();
     }
 
     @Override
