@@ -22,5 +22,9 @@
   "tfcelectriccooking.tooltip.stopped": "\u5df2\u505c\u6b62",
   "tfcelectriccooking.tooltip.current_temperature": "\u5f53\u524d\u6e29\u5ea6: %d\u00B0C",
   "tfcelectriccooking.tooltip.temperature": "%d\u00B0C",
-  "tfcelectriccooking.tooltip.food_trait.electric_oven_baked": "\u70e4\u7bb1\u70e4\u5236"
+  "tfcelectriccooking.tooltip.food_trait.electric_oven_baked": "\u70e4\u7bb1\u70e4\u5236",
+  "subtitles.block.tfcelectriccooking.electric_oven.open": "\u6253\u5f00\u7535\u70e4\u7bb1",
+  "subtitles.block.tfcelectriccooking.electric_oven.close": "\u5173\u95ed\u7535\u70e4\u7bb1",
+  "subtitles.block.tfcelectriccooking.electric_soup_pot.open": "\u6253\u5f00\u7535\u6c64\u9505",
+  "subtitles.block.tfcelectriccooking.electric_soup_pot.close": "\u5173\u95ed\u7535\u6c64\u9505"
 }

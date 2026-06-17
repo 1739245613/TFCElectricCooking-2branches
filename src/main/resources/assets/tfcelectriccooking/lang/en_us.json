@@ -22,5 +22,9 @@
   "tfcelectriccooking.tooltip.stopped": "Stopped",
   "tfcelectriccooking.tooltip.current_temperature": "Current: %d\u00B0C",
   "tfcelectriccooking.tooltip.temperature": "%d\u00B0C",
-  "tfcelectriccooking.tooltip.food_trait.electric_oven_baked": "Electric Oven Baked"
+  "tfcelectriccooking.tooltip.food_trait.electric_oven_baked": "Electric Oven Baked",
+  "subtitles.block.tfcelectriccooking.electric_oven.open": "Electric oven opens",
+  "subtitles.block.tfcelectriccooking.electric_oven.close": "Electric oven closes",
+  "subtitles.block.tfcelectriccooking.electric_soup_pot.open": "Electric soup pot opens",
+  "subtitles.block.tfcelectriccooking.electric_soup_pot.close": "Electric soup pot closes"
 }

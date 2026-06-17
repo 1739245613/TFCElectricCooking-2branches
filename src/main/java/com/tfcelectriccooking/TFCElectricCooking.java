@@ -6,6 +6,7 @@ import com.tfcelectriccooking.common.ModConfig;
 import com.tfcelectriccooking.common.ModContainerTypes;
 import com.tfcelectriccooking.common.ModCreativeTab;
 import com.tfcelectriccooking.common.ModFoodTraits;
+import com.tfcelectriccooking.common.ModSounds;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.ModLoadingContext;
@@ -29,6 +30,7 @@ public final class TFCElectricCooking
         ModBlocks.register(modBus);
         ModContainerTypes.register(modBus);
         ModCreativeTab.register(modBus);
+        ModSounds.register(modBus);
 
         if (FMLEnvironment.dist == Dist.CLIENT)
         {

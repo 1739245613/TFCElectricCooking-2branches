@@ -24,7 +24,8 @@ import net.minecraftforge.fluids.FluidStack;
 public class ElectricSoupPotScreen extends AbstractContainerScreen<ElectricSoupPotContainer>
 {
     private static final ResourceLocation BACKGROUND = new ResourceLocation(TFCElectricCooking.MOD_ID, "textures/gui/electric_soup_pot.png");
-    private static final ResourceLocation TFC_FIREPIT = new ResourceLocation("tfc", "textures/gui/fire_pit.png");
+    private static final ResourceLocation TEMPERATURE_BAR = new ResourceLocation(TFCElectricCooking.MOD_ID, "textures/gui/temperature_bar.png");
+    private static final ResourceLocation TEMPERATURE_INDICATOR = new ResourceLocation(TFCElectricCooking.MOD_ID, "textures/gui/temperature_indicator.png");
 
     private static final int GUI_WIDTH = 176;
     private static final int GUI_HEIGHT = 186;
@@ -36,9 +37,12 @@ public class ElectricSoupPotScreen extends AbstractContainerScreen<ElectricSoupP
     private static final int POWER_BUTTON_HEIGHT = 17;
 
     private static final int TEMPERATURE_X = 8;
-    private static final int TEMPERATURE_Y = 23;
+    private static final int TEMPERATURE_Y = 16;
     private static final int TEMPERATURE_WIDTH = 17;
     private static final int TEMPERATURE_HEIGHT = 62;
+    private static final int TEMPERATURE_TEXTURE_Y = 10;
+    private static final int TEMPERATURE_TEXTURE_HEIGHT = 74;
+    private static final int TEMPERATURE_RANGE = 51;
     private static final int TEMPERATURE_MARKER_X = 9;
     private static final int TEMPERATURE_MARKER_BOTTOM = 74;
 
@@ -54,18 +58,23 @@ public class ElectricSoupPotScreen extends AbstractContainerScreen<ElectricSoupP
     private static final int ENERGY_FILL_SRC_Y = 4;
 
     private static final int POT_CONTENT_X = 102;
-    private static final int POT_CONTENT_Y = 39;
+    private static final int POT_CONTENT_Y = 40;
     private static final int POT_CONTENT_WIDTH = 38;
     private static final int POT_CONTENT_HEIGHT = 34;
     private static final int POT_CONTENT_SRC_X = 218;
     private static final int POT_CONTENT_SRC_Y = 95;
-    private static final int POT_CONTENT_VISIBLE_HEIGHT = 24;
+    private static final int POT_CONTENT_VISIBLE_HEIGHT = POT_CONTENT_HEIGHT;
     private static final int POT_CONTENT_STEPS = 10;
 
     private static final int BUBBLES_X = 109;
     private static final int BUBBLES_Y = 16;
-    private static final int BUBBLES_WIDTH = 28;
-    private static final int BUBBLES_HEIGHT = 22;
+    private static final int BUBBLE_COLUMN_GAP = 14;
+    private static final int BUBBLE_COLUMN_WIDTH = 14;
+    private static final int BUBBLE_COLUMN_HEIGHT = 22;
+    private static final int BOILING_BUBBLES_SRC_X = 226;
+    private static final int BOILING_BUBBLES_SRC_Y = 66;
+    private static final int IDLE_BUBBLES_SRC_X = 240;
+    private static final int IDLE_BUBBLES_SRC_Y = 66;
 
     private static final int OUTPUT_TEXT_CENTER_X = 120;
     private static final int OUTPUT_TEXT_Y = 79;
@@ -122,13 +131,13 @@ public class ElectricSoupPotScreen extends AbstractContainerScreen<ElectricSoupP
 
     private void drawTemperature(GuiGraphics graphics)
     {
-        graphics.blit(TFC_FIREPIT, leftPos + TEMPERATURE_X, topPos + TEMPERATURE_Y - 7, 29, 16, TEMPERATURE_WIDTH, 65);
+        graphics.blit(TEMPERATURE_BAR, leftPos + TEMPERATURE_X, topPos + TEMPERATURE_TEXTURE_Y, 0, 0, TEMPERATURE_WIDTH, TEMPERATURE_TEXTURE_HEIGHT, TEMPERATURE_WIDTH, TEMPERATURE_TEXTURE_HEIGHT);
 
         final int temperature = menu.getBlockEntity().getSyncData().get(0);
         if (temperature > 0)
         {
-            final int markerY = TEMPERATURE_MARKER_BOTTOM - Math.min(51, Heat.scaleTemperatureForGui(temperature));
-            graphics.blit(TFC_FIREPIT, leftPos + TEMPERATURE_MARKER_X, topPos + markerY, 176, 0, 15, 5);
+            final int markerY = TEMPERATURE_MARKER_BOTTOM - Math.min(TEMPERATURE_RANGE, Heat.scaleTemperatureForGui(temperature));
+            graphics.blit(TEMPERATURE_INDICATOR, leftPos + TEMPERATURE_MARKER_X, topPos + markerY, 0, 0, 15, 5, 15, 5);
         }
     }
 
@@ -272,17 +281,29 @@ public class ElectricSoupPotScreen extends AbstractContainerScreen<ElectricSoupP
 
     private void drawBubbles(GuiGraphics graphics)
     {
-        final int temperature = menu.getBlockEntity().getSyncData().get(0);
-        final int progress = menu.getBlockEntity().getSyncData().get(3);
-        if (temperature < 301 && progress <= 0)
+        final PotRecipe.Output output = menu.getBlockEntity().getOutput();
+        final FluidStack fluid = menu.getBlockEntity().getFluidInTank();
+        if ((output == null || output.isEmpty()) && fluid.isEmpty() && menu.getBlockEntity().getSyncData().get(4) <= 0)
         {
             return;
         }
 
-        final int bubbleHeight = Math.max(1, Math.min(22, (progress % 35) * 22 / 35));
-        final int sourceY = 66 + (22 - bubbleHeight);
-        final int destY = BUBBLES_Y + (22 - bubbleHeight);
-        graphics.blit(BACKGROUND, leftPos + BUBBLES_X, topPos + destY, 226, sourceY, BUBBLES_WIDTH, bubbleHeight);
+        drawBubbleColumns(graphics, IDLE_BUBBLES_SRC_X, IDLE_BUBBLES_SRC_Y, BUBBLES_Y, BUBBLE_COLUMN_HEIGHT);
+
+        final int boilingTicks = menu.getBlockEntity().getSyncData().get(7);
+        if (boilingTicks > 0)
+        {
+            final int bubbleHeight = Math.max(1, Math.min(BUBBLE_COLUMN_HEIGHT, (boilingTicks % 35) * BUBBLE_COLUMN_HEIGHT / 35));
+            final int sourceY = BOILING_BUBBLES_SRC_Y + (BUBBLE_COLUMN_HEIGHT - bubbleHeight);
+            final int destY = BUBBLES_Y + (BUBBLE_COLUMN_HEIGHT - bubbleHeight);
+            drawBubbleColumns(graphics, BOILING_BUBBLES_SRC_X, sourceY, destY, bubbleHeight);
+        }
+    }
+
+    private void drawBubbleColumns(GuiGraphics graphics, int sourceX, int sourceY, int destY, int height)
+    {
+        graphics.blit(BACKGROUND, leftPos + BUBBLES_X, topPos + destY, sourceX, sourceY, BUBBLE_COLUMN_WIDTH, height);
+        graphics.blit(BACKGROUND, leftPos + BUBBLES_X + BUBBLE_COLUMN_GAP, topPos + destY, sourceX, sourceY, BUBBLE_COLUMN_WIDTH, height);
     }
 
     private void sendTargetTemperature(int temperature)

@@ -16,7 +16,8 @@ import net.minecraft.world.entity.player.Inventory;
 public class ElectricOvenScreen extends AbstractContainerScreen<ElectricOvenContainer>
 {
     private static final ResourceLocation BACKGROUND = new ResourceLocation(TFCElectricCooking.MOD_ID, "textures/gui/electric_oven.png");
-    private static final ResourceLocation TFC_FIREPIT = new ResourceLocation("tfc", "textures/gui/fire_pit.png");
+    private static final ResourceLocation TEMPERATURE_BAR = new ResourceLocation(TFCElectricCooking.MOD_ID, "textures/gui/temperature_bar.png");
+    private static final ResourceLocation TEMPERATURE_INDICATOR = new ResourceLocation(TFCElectricCooking.MOD_ID, "textures/gui/temperature_indicator.png");
 
     private static final int GUI_WIDTH = 176;
     private static final int GUI_HEIGHT = 186;
@@ -25,18 +26,26 @@ public class ElectricOvenScreen extends AbstractContainerScreen<ElectricOvenCont
     private static final int TARGET_SLIDER_Y = 21;
     private static final int TARGET_SLIDER_WIDTH = 14;
     private static final int TARGET_SLIDER_HEIGHT = 66;
-    private static final int TARGET_SLIDER_RANGE = 51;
-    private static final int TARGET_SLIDER_BOTTOM = 73;
+    private static final int TARGET_SLIDER_RANGE = 49;
+    private static final int TARGET_SLIDER_BOTTOM = 71;
 
     private static final int TARGET_HANDLE_X = 9;
     private static final int TARGET_HANDLE_Y = 22;
     private static final int TARGET_HANDLE_WIDTH = 12;
     private static final int TARGET_HANDLE_HEIGHT = 15;
+    private static final float TARGET_HANDLE_CENTER_OFFSET = TARGET_HANDLE_HEIGHT / 2f;
+    private static final int TARGET_SLIDER_HIT_X = TARGET_SLIDER_X - 2;
+    private static final int TARGET_SLIDER_HIT_Y = TARGET_SLIDER_BOTTOM - TARGET_SLIDER_RANGE;
+    private static final int TARGET_SLIDER_HIT_WIDTH = TARGET_SLIDER_WIDTH + 4;
+    private static final int TARGET_SLIDER_HIT_HEIGHT = TARGET_SLIDER_RANGE + TARGET_HANDLE_HEIGHT;
 
     private static final int TEMPERATURE_X = 25;
-    private static final int TEMPERATURE_Y = 28;
+    private static final int TEMPERATURE_Y = 21;
     private static final int TEMPERATURE_WIDTH = 17;
     private static final int TEMPERATURE_HEIGHT = 62;
+    private static final int TEMPERATURE_TEXTURE_Y = 15;
+    private static final int TEMPERATURE_TEXTURE_HEIGHT = 74;
+    private static final int TEMPERATURE_RANGE = 51;
     private static final int TEMPERATURE_MARKER_X = 26;
     private static final int TEMPERATURE_MARKER_BOTTOM = 79;
 
@@ -93,7 +102,7 @@ public class ElectricOvenScreen extends AbstractContainerScreen<ElectricOvenCont
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button)
     {
-        if (button == 0 && isInside(mouseX, mouseY, TARGET_SLIDER_X, TARGET_SLIDER_Y, TARGET_SLIDER_WIDTH, TARGET_SLIDER_HEIGHT))
+        if (button == 0 && isInside(mouseX, mouseY, TARGET_SLIDER_HIT_X, TARGET_SLIDER_HIT_Y, TARGET_SLIDER_HIT_WIDTH, TARGET_SLIDER_HIT_HEIGHT))
         {
             draggingTargetTemperature = true;
             updateSliderTemperature(mouseY);
@@ -136,13 +145,13 @@ public class ElectricOvenScreen extends AbstractContainerScreen<ElectricOvenCont
 
     private void drawTemperature(GuiGraphics graphics)
     {
-        graphics.blit(TFC_FIREPIT, leftPos + TEMPERATURE_X, topPos + TEMPERATURE_Y - 7, 29, 16, TEMPERATURE_WIDTH, 65);
+        graphics.blit(TEMPERATURE_BAR, leftPos + TEMPERATURE_X, topPos + TEMPERATURE_TEXTURE_Y, 0, 0, TEMPERATURE_WIDTH, TEMPERATURE_TEXTURE_HEIGHT, TEMPERATURE_WIDTH, TEMPERATURE_TEXTURE_HEIGHT);
 
         final int temperature = menu.getBlockEntity().getSyncData().get(0);
-        final int markerY = TEMPERATURE_MARKER_BOTTOM - Math.min(TARGET_SLIDER_RANGE, Heat.scaleTemperatureForGui(temperature));
+        final int markerY = TEMPERATURE_MARKER_BOTTOM - Math.min(TEMPERATURE_RANGE, Heat.scaleTemperatureForGui(temperature));
         if (temperature > 0)
         {
-            graphics.blit(TFC_FIREPIT, leftPos + TEMPERATURE_MARKER_X, topPos + markerY, 176, 0, 15, 5);
+            graphics.blit(TEMPERATURE_INDICATOR, leftPos + TEMPERATURE_MARKER_X, topPos + markerY, 0, 0, 15, 5, 15, 5);
         }
     }
 
@@ -168,7 +177,9 @@ public class ElectricOvenScreen extends AbstractContainerScreen<ElectricOvenCont
 
     private void updateSliderTemperature(double mouseY)
     {
-        final int relative = Mth.clamp(TARGET_SLIDER_BOTTOM - (int) Math.round(mouseY - topPos), 0, TARGET_SLIDER_RANGE);
+        final int top = TARGET_SLIDER_BOTTOM - TARGET_SLIDER_RANGE;
+        final int handleTop = Mth.clamp((int) Math.round(mouseY - topPos - TARGET_HANDLE_CENTER_OFFSET), top, TARGET_SLIDER_BOTTOM);
+        final int relative = TARGET_SLIDER_BOTTOM - handleTop;
         sliderTemperature = Math.round(relative * ElectricOvenBlockEntity.MAX_TEMPERATURE / (float) TARGET_SLIDER_RANGE);
     }
 
@@ -189,7 +200,7 @@ public class ElectricOvenScreen extends AbstractContainerScreen<ElectricOvenCont
 
     private void renderCustomTooltips(GuiGraphics graphics, int mouseX, int mouseY)
     {
-        if (isInside(mouseX, mouseY, TARGET_SLIDER_X, TARGET_SLIDER_Y, TARGET_SLIDER_WIDTH, TARGET_SLIDER_HEIGHT))
+        if (isInside(mouseX, mouseY, TARGET_SLIDER_HIT_X, TARGET_SLIDER_HIT_Y, TARGET_SLIDER_HIT_WIDTH, TARGET_SLIDER_HIT_HEIGHT))
         {
             final int targetTemperature = draggingTargetTemperature ? sliderTemperature : menu.getBlockEntity().getSyncData().get(1);
             graphics.renderTooltip(font, Component.translatable("tfcelectriccooking.tooltip.target_temperature", targetTemperature), mouseX, mouseY);

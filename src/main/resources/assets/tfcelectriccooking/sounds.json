@@ -1,0 +1,38 @@
+{
+  "block.electric_oven.open": {
+    "subtitle": "subtitles.block.tfcelectriccooking.electric_oven.open",
+    "sounds": [
+      {
+        "name": "tfcelectriccooking:block/electric_oven/open",
+        "type": "file"
+      }
+    ]
+  },
+  "block.electric_oven.close": {
+    "subtitle": "subtitles.block.tfcelectriccooking.electric_oven.close",
+    "sounds": [
+      {
+        "name": "tfcelectriccooking:block/electric_oven/close",
+        "type": "file"
+      }
+    ]
+  },
+  "block.electric_soup_pot.open": {
+    "subtitle": "subtitles.block.tfcelectriccooking.electric_soup_pot.open",
+    "sounds": [
+      {
+        "name": "tfcelectriccooking:block/electric_soup_pot/open",
+        "type": "file"
+      }
+    ]
+  },
+  "block.electric_soup_pot.close": {
+    "subtitle": "subtitles.block.tfcelectriccooking.electric_soup_pot.close",
+    "sounds": [
+      {
+        "name": "tfcelectriccooking:block/electric_soup_pot/close",
+        "type": "file"
+      }
+    ]
+  }
+}

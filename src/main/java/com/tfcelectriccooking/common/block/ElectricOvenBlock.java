@@ -1,6 +1,7 @@
 package com.tfcelectriccooking.common.block;
 
 import com.tfcelectriccooking.common.ModBlocks;
+import com.tfcelectriccooking.common.ModSounds;
 import com.tfcelectriccooking.common.blockentity.ElectricOvenBlockEntity;
 import net.dries007.tfc.common.blockentities.InventoryBlockEntity;
 import net.dries007.tfc.util.Helpers;
@@ -120,9 +121,16 @@ public class ElectricOvenBlock extends Block implements EntityBlock
 
     public static void setOpen(Level level, BlockPos pos, BlockState state, boolean open)
     {
-        if (state.hasProperty(OPEN) && state.getValue(OPEN) != open)
+        BlockState currentState = level.getBlockState(pos);
+        if (!currentState.is(state.getBlock()))
         {
-            level.setBlockAndUpdate(pos, state.setValue(OPEN, open));
+            currentState = state;
+        }
+
+        if (currentState.hasProperty(OPEN) && currentState.getValue(OPEN) != open)
+        {
+            level.setBlockAndUpdate(pos, currentState.setValue(OPEN, open));
+            Helpers.playSound(level, pos, open ? ModSounds.ELECTRIC_OVEN_OPEN.get() : ModSounds.ELECTRIC_OVEN_CLOSE.get());
         }
     }
 

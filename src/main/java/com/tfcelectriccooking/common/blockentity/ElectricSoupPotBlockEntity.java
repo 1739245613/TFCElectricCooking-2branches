@@ -133,6 +133,7 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
     private int syncedUiProgressTotal;
     private int syncedUiHasOutput;
     private int syncedUiRecipeTemperature;
+    private int syncedUiBoilingTicks;
 
     private final ContainerData syncData = new ContainerData()
     {
@@ -148,6 +149,7 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
                 case 4 -> clientSide ? syncedUiProgressTotal : getUiProgressTotal();
                 case 5 -> clientSide ? syncedUiHasOutput : (hasOutput() ? 1 : 0);
                 case 6 -> clientSide ? syncedUiRecipeTemperature : getUiRecipeTemperature();
+                case 7 -> clientSide ? syncedUiBoilingTicks : boilingTicks;
                 default -> 0;
             };
         }
@@ -164,6 +166,7 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
                 case 4 -> syncedUiProgressTotal = value;
                 case 5 -> syncedUiHasOutput = value;
                 case 6 -> syncedUiRecipeTemperature = value;
+                case 7 -> syncedUiBoilingTicks = value;
                 default -> {
                 }
             }
@@ -172,7 +175,7 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
         @Override
         public int getCount()
         {
-            return 7;
+            return 8;
         }
     };
 
@@ -776,7 +779,7 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
 
     private int getCookingSpeedMultiplier()
     {
-        return getBlockState().getValue(com.tfcelectriccooking.common.block.ElectricSoupPotBlock.OPEN) ? 1 : SPEED_MULTIPLIER;
+        return SPEED_MULTIPLIER;
     }
 
     public @Nullable PotRecipe.Output getOutput()

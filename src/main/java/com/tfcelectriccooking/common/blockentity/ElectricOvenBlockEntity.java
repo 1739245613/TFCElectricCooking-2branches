@@ -171,8 +171,7 @@ public class ElectricOvenBlockEntity extends TickableInventoryBlockEntity<Invent
     private void handleTemperature()
     {
         final boolean powered = getBlockState().getValue(com.tfcelectriccooking.common.block.ElectricOvenBlock.POWERED);
-        final boolean open = getBlockState().getValue(com.tfcelectriccooking.common.block.ElectricOvenBlock.OPEN);
-        if (powered && targetTemperature > 0 && !open)
+        if (powered && targetTemperature > 0)
         {
             if (temperature < targetTemperature)
             {
@@ -191,7 +190,7 @@ public class ElectricOvenBlockEntity extends TickableInventoryBlockEntity<Invent
 
     private void handleCooking(Level level)
     {
-        if (temperature <= 0 || getBlockState().getValue(com.tfcelectriccooking.common.block.ElectricOvenBlock.OPEN))
+        if (temperature <= 0)
         {
             return;
         }
