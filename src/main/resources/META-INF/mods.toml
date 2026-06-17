@@ -5,29 +5,28 @@ license = "All Rights Reserved"
 [[mods]]
 modId = "tfcelectriccooking"
 version = "${file.jarVersion}"
-displayName = "群峦烤箱和汤锅 - TFC Electric Cooking"
+displayName = "TFC Electric Cooking"
 authors = "交错次元"
+credits = "美术: witzig_heidi(鱼) "
 description = '''
-TFC Electric Cooking / 群峦烤箱和汤锅
+TFC Electric Cooking / 群峦电力烹饪
 中文简介
-这是一个面向 TerraFirmaCraft 中后期流程的电力厨房扩展模组。它为 TFC + FirmaLife + Immersive Engineering 环境加入了两台可用电力驱动的高级厨房设备：电烤箱与电汤锅。
+这是一个面向 TerraFirmaCraft 中后期流程的电力厨房扩展模组。它为 TFC + FirmaLife + Immersive Engineering 环境加入了两台可用电力驱动的高级厨房设备：电热烤箱与电热高压锅。
 
 主要内容
-- 电烤箱：6 个输入槽，使用 Immersive Engineering 电力加热，兼容 TFC 加热配方与 FirmaLife 烤箱配方。
-- 电汤锅：5 个输入槽，支持流体与 TFC 锅类配方逻辑，提供独立液体显示、加工进度条和完成状态。
-- 手动温度控制：两台设备都支持 0 ~ 800°C 的目标温度输入。
+- 电热烤箱：6 个输入槽，使用 Immersive Engineering 电力加热，兼容 TFC 加热配方与 FirmaLife 烤箱配方。
+- 电热高压锅：5 个输入槽，支持流体与 TFC 锅类配方逻辑，提供独立液体显示、加工进度条和完成状态。
+- 手动温度控制：电热烤箱支持 0 ~ 800°C 目标温度滑块，电热高压锅可在停止与 350°C 运行状态间切换。
 - 能量参数：能量容量 16000 FE，基础耗电 20 FE/t，最大输入 / 输出 256 FE/t。
 - 温度参数：通电时每 tick 向目标温度靠近 3°C，断电后每 tick 降温 1.5°C。
-- 汤锅参数：预沸腾时间 100 ticks，正式烹饪阶段按 4x 速度推进。
-- 食物特性：电烤箱产出的食物会附加 Electric Oven Baked / 烤箱烤制特性，腐败倍率为 0.9x。
-- 新增电汤锅专用配方：500 mB 水 + 1 个甜味剂可制作 500 mB FirmaLife 糖水；500 mB 糖水 + 单一水果可按水果数量制作果酱锅内输出。
+- 电热高压锅参数：预沸腾时间 100 ticks，正式烹饪阶段按 4x 速度推进。
+- 开合交互：潜行右键可手动打开或关闭电热烤箱门与电热高压锅盖；打开 GUI 时会自动打开，关闭 GUI 时会自动关闭。
+- 食物特性：电热烤箱产出的食物会附加 Electric Oven Baked / 烤箱烤制特性，腐败倍率为 0.9x。
+- 新增电热高压锅专用配方：500 mB 水 + 1 个甜味剂可制作 500 mB FirmaLife 糖水；500 mB 糖水 + 单一水果可按水果数量制作果酱锅内输出。
 - 新增蜂蜜转糖配方：FirmaLife 生蜂蜜和蜂蜜罐可合成为糖，蜂蜜罐依赖原物品的合成剩余物返还空罐。
-- 装罐台自动化：FirmaLife 装罐台可自动输入空罐、输出成品，并可正对电汤锅自动装取果酱；无盖空罐产出无盖果酱，带盖空罐产出密封果酱。
-- JEI 兼容：电烤箱会作为 TFC 加热与 FirmaLife 烤箱分类的催化设备显示；电汤锅会作为 TFC / FirmaLife 锅类分类的催化设备显示。
-- Jade 兼容：显示当前温度、汤锅沸腾阈值、待机 / 进度 / 完成状态等信息。
-
-温度说明
-汤锅的沸腾阈值使用“大于”逻辑。例如显示“大于 300°C 沸腾”时，实际需要 301°C 或更高温度才会开始处理。
+- 装罐台自动化：FirmaLife 装罐台可自动输入空罐、输出成品，并可正对电热高压锅自动装取果酱；无盖空罐产出无盖果酱，带盖空罐产出密封果酱。
+- JEI 兼容：电热烤箱会作为 TFC 加热与 FirmaLife 烤箱分类的催化设备显示；电热高压锅会作为 TFC / FirmaLife 锅类分类的催化设备显示。
+- Jade 兼容：显示当前温度、电热高压锅待机 / 进度 / 完成状态等信息。
 
 授权与声明
 本模组采用 All Rights Reserved (ARR) 闭源授权。
@@ -44,19 +43,20 @@ It adds two powered cooking appliances: the Electric Oven and the Electric Soup 
 Features
 - Electric Oven: 6 input slots, powered by Immersive Engineering energy, compatible with TFC heating recipes and FirmaLife oven recipes.
 - Electric Soup Pot: 5 input slots, supports fluid-based TFC pot recipe logic, with liquid display, progress bar, and finished state.
-- Manual temperature control from 0 to 800°C.
+- Electric Oven target temperature control from 0 to 800°C; Electric Soup Pot run/stop control at 350°C.
 - Energy capacity: 16000 FE.
 - Base energy cost: 20 FE/t.
 - Max energy input/output: 256 FE/t.
 - Temperature change: +3°C/tick while powered toward the target, -1.5°C/tick while cooling.
 - Soup pot pre-boil time: 100 ticks.
 - Soup pot cooking progress speed: 4x.
+- Sneak-right-click toggles the oven door or soup pot lid; opening the GUI opens it automatically and closing the GUI closes it automatically.
 - Electric oven food output receives the Electric Oven Baked food trait with a 0.9x decay modifier.
 - New Electric Soup Pot recipes: 500 mB water + 1 sweetener creates 500 mB FirmaLife sugar water; 500 mB sugar water + one kind of fruit creates jam output based on the fruit count.
 - New honey-to-sugar recipes: FirmaLife raw honey and honey jars can be crafted into sugar; honey jars rely on their normal crafting remainder to return the empty jar.
 - Jarring station automation: FirmaLife jarring stations can accept empty jars, output filled products, and automatically jar jam from a facing Electric Soup Pot. Empty jars create unsealed jam, while lidded jars create sealed jam.
 - JEI integration: recipe catalyst support for matching TFC and FirmaLife cooking categories.
-- Jade integration: current temperature, boiling threshold, idle/progress/done status, and soup-pot progress display.
+- Jade integration: current temperature, idle/progress/done status, and soup-pot progress display.
 
 License Notice
 This mod is distributed under All Rights Reserved (ARR).
