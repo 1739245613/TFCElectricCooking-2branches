@@ -1,32 +1,34 @@
 package com.tfcelectriccooking.compat.jei;
 
 import com.tfcelectriccooking.common.ModBlocks;
+import java.util.List;
 import mezz.jei.api.gui.builder.IRecipeLayoutBuilder;
-import mezz.jei.api.gui.drawable.IDrawable;
+import mezz.jei.api.gui.builder.IRecipeSlotBuilder;
+import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
 import mezz.jei.api.helpers.IGuiHelper;
 import mezz.jei.api.recipe.IFocusGroup;
 import mezz.jei.api.recipe.RecipeIngredientRole;
 import mezz.jei.api.recipe.RecipeType;
-import mezz.jei.api.recipe.category.IRecipeCategory;
-import net.minecraft.client.Minecraft;
+import net.dries007.tfc.compat.jei.JEIIntegration;
+import net.dries007.tfc.compat.jei.category.BaseRecipeCategory;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.fluids.FluidStack;
+import org.jetbrains.annotations.Nullable;
 
-public final class ElectricSoupPotRecipeCategory implements IRecipeCategory<ElectricSoupPotRecipe>
+public final class ElectricSoupPotRecipeCategory extends BaseRecipeCategory<ElectricSoupPotRecipe>
 {
     private static final Component TITLE = Component.translatable("tfcelectriccooking.jei.electric_soup_pot");
 
-    private final IDrawable background;
-    private final IDrawable icon;
-    private final IDrawable slot;
+    private @Nullable IRecipeSlotBuilder inputFluidSlot;
+    private @Nullable IRecipeSlotBuilder inputItemSlot;
+    private @Nullable IRecipeSlotBuilder outputFluidSlot;
+    private @Nullable IRecipeSlotBuilder outputItemSlot;
 
     public ElectricSoupPotRecipeCategory(IGuiHelper helper)
     {
-        background = helper.createBlankDrawable(176, 74);
-        icon = helper.createDrawableItemStack(new ItemStack(ModBlocks.ELECTRIC_SOUP_POT.get()));
-        slot = helper.getSlotDrawable();
+        super(TFCElectricCookingJEIPlugin.ELECTRIC_SOUP_POT, helper, helper.createBlankDrawable(118, 26), new ItemStack(ModBlocks.ELECTRIC_SOUP_POT.get()));
     }
 
     @Override
@@ -42,63 +44,64 @@ public final class ElectricSoupPotRecipeCategory implements IRecipeCategory<Elec
     }
 
     @Override
-    public IDrawable getBackground()
-    {
-        return background;
-    }
-
-    @Override
-    public IDrawable getIcon()
-    {
-        return icon;
-    }
-
-    @Override
     public void setRecipe(IRecipeLayoutBuilder builder, ElectricSoupPotRecipe recipe, IFocusGroup focuses)
     {
-        builder.addSlot(RecipeIngredientRole.CATALYST, 6, 29)
-            .setBackground(slot, -1, -1)
-            .addItemStack(new ItemStack(ModBlocks.ELECTRIC_SOUP_POT.get()));
+        inputFluidSlot = null;
+        inputItemSlot = null;
+        outputFluidSlot = null;
+        outputItemSlot = null;
 
-        final int inputs = Math.min(recipe.inputItems().size(), 5);
-        for (int i = 0; i < inputs; i++)
+        final int[] positions = slotPositions(recipe);
+        final List<FluidStack> inputFluids = recipe.inputFluid().isEmpty() ? List.of() : List.of(recipe.inputFluid());
+        final List<ItemStack> outputItems = recipe.outputItems();
+
+        if (!inputFluids.isEmpty())
         {
-            builder.addSlot(RecipeIngredientRole.INPUT, 34 + i * 19, 7)
-                .setBackground(slot, -1, -1)
-                .addIngredients(recipe.inputItems().get(i));
+            inputFluidSlot = builder.addSlot(RecipeIngredientRole.INPUT, recipe.inputItems().isEmpty() ? positions[1] : positions[0], 5);
+            inputFluidSlot.addIngredients(JEIIntegration.FLUID_STACK, inputFluids);
+            inputFluidSlot.setFluidRenderer(1, false, 16, 16);
+            inputFluidSlot.setBackground(slot, -1, -1);
         }
 
-        final FluidStack inputFluid = recipe.inputFluid();
-        if (!inputFluid.isEmpty())
+        if (!recipe.inputItems().isEmpty())
         {
-            builder.addSlot(RecipeIngredientRole.INPUT, 63, 38)
-                .setBackground(slot, -1, -1)
-                .setFluidRenderer(1000, false, 16, 16)
-                .addFluidStack(inputFluid.getFluid(), inputFluid.getAmount(), inputFluid.getTag());
-        }
-
-        if (!recipe.outputItems().isEmpty())
-        {
-            builder.addSlot(RecipeIngredientRole.OUTPUT, 151, 7)
-                .setBackground(slot, -1, -1)
-                .addItemStacks(recipe.outputItems());
+            inputItemSlot = builder.addSlot(RecipeIngredientRole.INPUT, positions[1], 5);
+            inputItemSlot.addIngredients(recipe.inputItems().get(0));
+            inputItemSlot.setBackground(slot, -1, -1);
         }
 
         final FluidStack outputFluid = recipe.outputFluid();
         if (!outputFluid.isEmpty())
         {
-            builder.addSlot(RecipeIngredientRole.OUTPUT, 151, 38)
-                .setBackground(slot, -1, -1)
-                .setFluidRenderer(1000, false, 16, 16)
-                .addFluidStack(outputFluid.getFluid(), outputFluid.getAmount(), outputFluid.getTag());
+            outputFluidSlot = builder.addSlot(RecipeIngredientRole.OUTPUT, positions[2], 5);
+            outputFluidSlot.addIngredient(JEIIntegration.FLUID_STACK, outputFluid);
+            outputFluidSlot.setFluidRenderer(1, false, 16, 16);
+            outputFluidSlot.setBackground(slot, -1, -1);
+        }
+
+        if (!outputItems.isEmpty() && !outputItems.stream().allMatch(ItemStack::isEmpty))
+        {
+            outputItemSlot = builder.addSlot(RecipeIngredientRole.OUTPUT, outputFluid.isEmpty() ? positions[2] : positions[3], 5);
+            outputItemSlot.addItemStacks(outputItems);
+            outputItemSlot.setBackground(slot, -1, -1);
         }
     }
 
     @Override
-    public void draw(ElectricSoupPotRecipe recipe, mezz.jei.api.gui.ingredient.IRecipeSlotsView recipeSlotsView, GuiGraphics graphics, double mouseX, double mouseY)
+    public void draw(ElectricSoupPotRecipe recipe, IRecipeSlotsView recipeSlots, GuiGraphics graphics, double mouseX, double mouseY)
     {
-        final Minecraft minecraft = Minecraft.getInstance();
-        graphics.drawString(minecraft.font, recipe.title(), 34, 61, 0x404040, false);
-        graphics.drawString(minecraft.font, ">", 126, 30, 0x606060, false);
+        final int arrowPosition = arrowPosition(recipe);
+        arrow.draw(graphics, arrowPosition, 5);
+        arrowAnimated.draw(graphics, arrowPosition, 5);
+    }
+
+    private int[] slotPositions(ElectricSoupPotRecipe recipe)
+    {
+        return new int[] {6, 26, 76, 96};
+    }
+
+    private int arrowPosition(ElectricSoupPotRecipe recipe)
+    {
+        return 48;
     }
 }

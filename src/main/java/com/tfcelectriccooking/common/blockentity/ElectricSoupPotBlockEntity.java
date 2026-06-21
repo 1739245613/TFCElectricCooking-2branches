@@ -79,6 +79,7 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
     public static final int ENERGY_PER_TICK = 20;
     public static final int MAX_TEMPERATURE = 800;
     private static final int SUGAR_WATER_AMOUNT = 500;
+    private static final int SUGAR_WATER_PER_JAM = 100;
 
     private static final @Nullable Field POT_RECIPE_TEMPERATURE_FIELD = findPotRecipeTemperatureField();
     private static final ResourceLocation FIRMA_LIFE_DRIED_TRAIT = new ResourceLocation("firmalife", "dried");
@@ -467,7 +468,7 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
             return PotRecipe.Output.read(new CompoundTag());
         }
 
-        inventory.getFluidHandler().drain(SUGAR_WATER_AMOUNT, IFluidHandler.FluidAction.EXECUTE);
+        inventory.getFluidHandler().drain(batch.count * SUGAR_WATER_PER_JAM, IFluidHandler.FluidAction.EXECUTE);
         int remaining = batch.count;
         for (int slot = SLOT_EXTRA_INPUT_START; slot <= SLOT_EXTRA_INPUT_END && remaining > 0; slot++)
         {
@@ -506,9 +507,11 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
     private boolean matchesSugarWaterJamRecipe()
     {
         final FluidStack fluid = inventory.getFluidInTank(0);
-        return fluid.getAmount() >= SUGAR_WATER_AMOUNT
+        final FruitBatch batch = getSingleFruitBatch();
+        return fluid.getAmount() >= SUGAR_WATER_PER_JAM
             && isSugarWaterFluid(fluid)
-            && getSingleFruitBatch() != null;
+            && batch != null
+            && fluid.getAmount() >= batch.count * SUGAR_WATER_PER_JAM;
     }
 
     private int getSugarWaterConversionAmount()

@@ -4,7 +4,9 @@ import com.tfcelectriccooking.TFCElectricCooking;
 import com.tfcelectriccooking.common.ModBlocks;
 import com.tfcelectriccooking.common.compat.JamJarCompat;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
 import mezz.jei.api.recipe.RecipeType;
@@ -18,7 +20,6 @@ import net.dries007.tfc.common.recipes.ingredients.NotRottenIngredient;
 import net.dries007.tfc.compat.jei.JEIIntegration;
 import net.dries007.tfc.util.Helpers;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
@@ -38,6 +39,7 @@ public final class TFCElectricCookingJEIPlugin implements IModPlugin
 
     private static final ResourceLocation FIRMA_LIFE_DRIED_TRAIT = new ResourceLocation("firmalife", "dried");
     private static final ResourceLocation FIRMA_LIFE_SUGAR_WATER = new ResourceLocation("firmalife", "sugar_water");
+    private static final int SUGAR_WATER_PER_JAM = 100;
     private static final TagKey<Item> SWEETENER = TagKey.create(Registries.ITEM, new ResourceLocation("tfc", "sweetener"));
     private static final TagKey<Item> FRUITS = TagKey.create(Registries.ITEM, new ResourceLocation("tfc", "foods/fruits"));
     private static final RecipeType<PotRecipe> FIRMA_LIFE_BOWL_POT = RecipeType.create("firmalife", "bowl_pot", PotRecipe.class);
@@ -119,18 +121,33 @@ public final class TFCElectricCookingJEIPlugin implements IModPlugin
 
         final List<ElectricSoupPotRecipe> recipes = new ArrayList<>();
         recipes.add(new ElectricSoupPotRecipe(
-            Component.translatable("tfcelectriccooking.jei.sugar_water"),
             List.of(Ingredient.of(SWEETENER)),
             new FluidStack(Fluids.WATER, 500),
             List.of(),
             new FluidStack(sugarWater, 500)
         ));
 
-        Helpers.allItems(FRUITS).forEach(foodItem -> addSugarWaterJamRecipes(recipes, sugarWater, foodItem));
+        final List<ItemStack> jamOutputs = createSugarWaterJamOutputs();
+        if (!jamOutputs.isEmpty())
+        {
+            recipes.add(new ElectricSoupPotRecipe(
+                List.of(nonDriedFruitIngredient(Ingredient.of(FRUITS))),
+                new FluidStack(sugarWater, SUGAR_WATER_PER_JAM),
+                jamOutputs,
+                FluidStack.EMPTY
+            ));
+        }
         return recipes;
     }
 
-    private static void addSugarWaterJamRecipes(List<ElectricSoupPotRecipe> recipes, Fluid sugarWater, Item foodItem)
+    private static List<ItemStack> createSugarWaterJamOutputs()
+    {
+        final Map<ResourceLocation, ItemStack> outputs = new LinkedHashMap<>();
+        Helpers.allItems(FRUITS).forEach(foodItem -> addSugarWaterJamOutputs(outputs, foodItem));
+        return List.copyOf(outputs.values());
+    }
+
+    private static void addSugarWaterJamOutputs(Map<ResourceLocation, ItemStack> outputs, Item foodItem)
     {
         final ResourceLocation foodId = ForgeRegistries.ITEMS.getKey(foodItem);
         if (foodId == null || !foodId.getPath().startsWith("food/"))
@@ -139,34 +156,19 @@ public final class TFCElectricCookingJEIPlugin implements IModPlugin
         }
 
         final String fruitName = foodId.getPath().substring("food/".length());
-        final Ingredient fruit = nonDriedFruitIngredient(foodItem);
-        for (int count = 1; count <= 5; count++)
+        for (ItemStack output : JamJarCompat.getJeiResults(foodId.getNamespace(), fruitName, 1))
         {
-            final List<ItemStack> outputs = JamJarCompat.getJeiResults(foodId.getNamespace(), fruitName, count);
-            if (outputs.isEmpty())
+            final ResourceLocation outputId = ForgeRegistries.ITEMS.getKey(output.getItem());
+            if (outputId != null)
             {
-                continue;
+                outputs.putIfAbsent(outputId, output);
             }
-
-            final List<Ingredient> ingredients = new ArrayList<>(count);
-            for (int i = 0; i < count; i++)
-            {
-                ingredients.add(fruit);
-            }
-            recipes.add(new ElectricSoupPotRecipe(
-                Component.translatable("tfcelectriccooking.jei.sugar_water_jam"),
-                ingredients,
-                new FluidStack(sugarWater, 500),
-                outputs,
-                FluidStack.EMPTY
-            ));
         }
     }
 
-    private static Ingredient nonDriedFruitIngredient(Item item)
+    private static Ingredient nonDriedFruitIngredient(Ingredient ingredient)
     {
-        final Ingredient base = Ingredient.of(item);
         final FoodTrait dried = FoodTrait.getTrait(FIRMA_LIFE_DRIED_TRAIT);
-        return NotRottenIngredient.of(dried == null ? base : LacksTraitIngredient.of(base, dried));
+        return NotRottenIngredient.of(dried == null ? ingredient : LacksTraitIngredient.of(ingredient, dried));
     }
 }

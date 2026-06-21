@@ -8,6 +8,7 @@ import java.util.List;
 import net.dries007.tfc.client.RenderHelpers;
 import net.dries007.tfc.common.capabilities.heat.Heat;
 import net.dries007.tfc.common.fluids.FluidHelpers;
+import net.dries007.tfc.common.recipes.JamPotRecipe;
 import net.dries007.tfc.common.recipes.PotRecipe;
 import net.dries007.tfc.compat.jade.common.BlockEntityTooltip;
 import net.dries007.tfc.config.TFCConfig;
@@ -79,6 +80,33 @@ public class ElectricSoupPotScreen extends AbstractContainerScreen<ElectricSoupP
     private static final int OUTPUT_TEXT_CENTER_X = 120;
     private static final int OUTPUT_TEXT_Y = 79;
     private static final int OUTPUT_TEXT_MAX_WIDTH = 78;
+    private static final String JAM_SUFFIX = "\u679c\u9171";
+    private static final String[] JAM_DISPLAY_PREFIXES = {
+        "\u9521\u76d6\u5bc6\u5c01\u7684",
+        "\u94a2\u76d6\u5bc6\u5c01\u7684",
+        "\u94dd\u76d6\u5bc6\u5c01\u7684",
+        "\u94c1\u76d6\u5bc6\u5c01\u7684",
+        "\u94dc\u76d6\u5bc6\u5c01\u7684",
+        "\u672a\u5bc6\u5c01\u7684",
+        "\u5df2\u5bc6\u5c01\u7684",
+        "\u5bc6\u5c01\u7684",
+        "\u5c01\u597d\u7684",
+        "\u5c01\u53e3\u7684",
+        "\u5e26\u76d6\u7684",
+        "\u6709\u76d6\u7684",
+        "\u65e0\u76d6\u7684",
+        "\u9521\u76d6\u7684",
+        "\u94a2\u76d6\u7684",
+        "\u94dd\u76d6\u7684",
+        "\u94c1\u76d6\u7684",
+        "\u94dc\u76d6\u7684",
+        "\u9521\u76d6",
+        "\u94a2\u76d6",
+        "\u94dd\u76d6",
+        "\u94c1\u76d6",
+        "\u94dc\u76d6",
+        "\u5bc6\u5c01"
+    };
 
     public ElectricSoupPotScreen(ElectricSoupPotContainer container, Inventory playerInv, Component title)
     {
@@ -112,6 +140,7 @@ public class ElectricSoupPotScreen extends AbstractContainerScreen<ElectricSoupP
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick)
     {
+        renderBackground(graphics);
         super.render(graphics, mouseX, mouseY, partialTick);
         renderTooltip(graphics, mouseX, mouseY);
         renderCustomTooltips(graphics, mouseX, mouseY);
@@ -337,12 +366,100 @@ public class ElectricSoupPotScreen extends AbstractContainerScreen<ElectricSoupP
                 tooltip.display(menu.getBlockEntity().getLevel(), menu.getBlockEntity().getBlockState(), menu.getBlockEntity().getBlockPos(), menu.getBlockEntity(), fakeTooltip::add);
                 if (!fakeTooltip.isEmpty())
                 {
-                    return fakeTooltip.get(0);
+                    return formatOutputText(output, fakeTooltip.get(0));
                 }
             }
             return Component.translatable("tfcelectriccooking.gui.done");
         }
         return Component.empty();
+    }
+
+    private Component formatOutputText(PotRecipe.Output output, Component component)
+    {
+        if (output instanceof JamPotRecipe.JamOutput)
+        {
+            final String text = component.getString();
+            final String cleaned = stripJamDisplayPrefix(text);
+            if (!cleaned.equals(text))
+            {
+                return Component.literal(cleaned).withStyle(component.getStyle());
+            }
+        }
+        return component;
+    }
+
+    private String stripJamDisplayPrefix(String text)
+    {
+        if (!text.contains(JAM_SUFFIX))
+        {
+            return text;
+        }
+
+        int index = 0;
+        while (index < text.length() && Character.isWhitespace(text.charAt(index)))
+        {
+            index++;
+        }
+
+        final int countStart = index;
+        while (index < text.length() && Character.isDigit(text.charAt(index)))
+        {
+            index++;
+        }
+
+        boolean removedCount = false;
+        if (index > countStart)
+        {
+            int afterCount = index;
+            while (afterCount < text.length() && Character.isWhitespace(text.charAt(afterCount)))
+            {
+                afterCount++;
+            }
+            if (afterCount < text.length() && isCountSeparator(text.charAt(afterCount)))
+            {
+                afterCount++;
+                while (afterCount < text.length() && Character.isWhitespace(text.charAt(afterCount)))
+                {
+                    afterCount++;
+                }
+                removedCount = true;
+                index = afterCount;
+            }
+            else
+            {
+                index = countStart;
+            }
+        }
+
+        final String originalName = text.substring(index).stripLeading();
+        String name = originalName;
+        boolean removedPrefix = false;
+        boolean stripped;
+        do
+        {
+            stripped = false;
+            for (String prefix : JAM_DISPLAY_PREFIXES)
+            {
+                if (name.startsWith(prefix))
+                {
+                    name = name.substring(prefix.length()).stripLeading();
+                    removedPrefix = true;
+                    stripped = true;
+                    break;
+                }
+            }
+        } while (stripped);
+
+        if (name.isEmpty() || !name.contains(JAM_SUFFIX) || (!removedCount && !removedPrefix))
+        {
+            return text;
+        }
+        return name;
+    }
+
+    private boolean isCountSeparator(char value)
+    {
+        return value == 'x' || value == 'X' || value == '\u00d7';
     }
 
     private int getPotContentSteps(PotRecipe.Output output, FluidStack fluid)
