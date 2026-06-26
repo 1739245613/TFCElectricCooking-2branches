@@ -37,6 +37,11 @@ public class ElectricOvenBlockEntity extends TickableInventoryBlockEntity<Invent
     public static final int ENERGY_MAX_IO = 256;
     public static final int ENERGY_PER_TICK = 20;
     public static final int MAX_TEMPERATURE = 800;
+    public static final int DATA_TEMPERATURE = 0;
+    public static final int DATA_TARGET_TEMPERATURE = 1;
+    public static final int DATA_ENERGY_LOW = 2;
+    public static final int DATA_ENERGY_HIGH = 3;
+    public static final int DATA_COUNT = 4;
 
     private final EnergyStorage energyStorage = new EnergyStorage(ENERGY_CAPACITY, ENERGY_MAX_IO, ENERGY_MAX_IO, 0)
     {
@@ -70,6 +75,8 @@ public class ElectricOvenBlockEntity extends TickableInventoryBlockEntity<Invent
 
     private float temperature;
     private int targetTemperature;
+    private int syncedEnergyLow;
+    private int syncedEnergyHigh;
     private boolean needsRecipeUpdate = true;
 
     private final ContainerData syncData = new ContainerData()
@@ -78,9 +85,10 @@ public class ElectricOvenBlockEntity extends TickableInventoryBlockEntity<Invent
         public int get(int index)
         {
             return switch (index) {
-                case 0 -> (int) temperature;
-                case 1 -> targetTemperature;
-                case 2 -> energyStorage.getEnergyStored();
+                case DATA_TEMPERATURE -> (int) temperature;
+                case DATA_TARGET_TEMPERATURE -> targetTemperature;
+                case DATA_ENERGY_LOW -> low16(energyStorage.getEnergyStored());
+                case DATA_ENERGY_HIGH -> high16(energyStorage.getEnergyStored());
                 default -> 0;
             };
         }
@@ -90,9 +98,9 @@ public class ElectricOvenBlockEntity extends TickableInventoryBlockEntity<Invent
         {
             switch (index)
             {
-                case 0 -> temperature = value;
-                case 1 -> targetTemperature = Math.max(0, Math.min(MAX_TEMPERATURE, value));
-                case 2 -> setSyncedEnergy(value);
+                case DATA_TEMPERATURE -> temperature = value;
+                case DATA_TARGET_TEMPERATURE -> targetTemperature = Math.max(0, Math.min(MAX_TEMPERATURE, value));
+                case DATA_ENERGY_LOW, DATA_ENERGY_HIGH -> setSyncedEnergyPart(index, value);
                 default -> {
                 }
             }
@@ -101,7 +109,7 @@ public class ElectricOvenBlockEntity extends TickableInventoryBlockEntity<Invent
         @Override
         public int getCount()
         {
-            return 3;
+            return DATA_COUNT;
         }
     };
 
@@ -116,7 +124,36 @@ public class ElectricOvenBlockEntity extends TickableInventoryBlockEntity<Invent
 
     private void setSyncedEnergy(int energy)
     {
-        energyStorage.deserializeNBT(IntTag.valueOf(Math.max(0, Math.min(ENERGY_CAPACITY, energy))));
+        final int clamped = Math.max(0, Math.min(ENERGY_CAPACITY, energy));
+        energyStorage.deserializeNBT(IntTag.valueOf(clamped));
+    }
+
+    private void setSyncedEnergyPart(int index, int value)
+    {
+        if (index == DATA_ENERGY_LOW)
+        {
+            syncedEnergyLow = value & 0xFFFF;
+        }
+        else if (index == DATA_ENERGY_HIGH)
+        {
+            syncedEnergyHigh = value & 0xFFFF;
+        }
+        setSyncedEnergy(combineUnsignedShorts(syncedEnergyLow, syncedEnergyHigh));
+    }
+
+    private static int low16(int value)
+    {
+        return value & 0xFFFF;
+    }
+
+    private static int high16(int value)
+    {
+        return (value >>> 16) & 0xFFFF;
+    }
+
+    private static int combineUnsignedShorts(int low, int high)
+    {
+        return ((high & 0xFFFF) << 16) | (low & 0xFFFF);
     }
 
     private void syncAutomationChange()

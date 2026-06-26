@@ -78,6 +78,19 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
     public static final int ENERGY_MAX_IO = 256;
     public static final int ENERGY_PER_TICK = 20;
     public static final int MAX_TEMPERATURE = 800;
+    public static final int DATA_TEMPERATURE = 0;
+    public static final int DATA_TARGET_TEMPERATURE = 1;
+    public static final int DATA_ENERGY_LOW = 2;
+    public static final int DATA_ENERGY_HIGH = 3;
+    public static final int DATA_PROGRESS_LOW = 4;
+    public static final int DATA_PROGRESS_HIGH = 5;
+    public static final int DATA_PROGRESS_TOTAL_LOW = 6;
+    public static final int DATA_PROGRESS_TOTAL_HIGH = 7;
+    public static final int DATA_HAS_OUTPUT = 8;
+    public static final int DATA_RECIPE_TEMPERATURE = 9;
+    public static final int DATA_BOILING_TICKS_LOW = 10;
+    public static final int DATA_BOILING_TICKS_HIGH = 11;
+    public static final int DATA_COUNT = 12;
     private static final int SUGAR_WATER_AMOUNT = 500;
     private static final int SUGAR_WATER_PER_JAM = 100;
 
@@ -135,6 +148,8 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
     private int syncedUiHasOutput;
     private int syncedUiRecipeTemperature;
     private int syncedUiBoilingTicks;
+    private int syncedEnergyLow;
+    private int syncedEnergyHigh;
 
     private final ContainerData syncData = new ContainerData()
     {
@@ -142,15 +157,21 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
         public int get(int index)
         {
             final boolean clientSide = getLevel() != null && getLevel().isClientSide;
+            final int progress = clientSide ? syncedUiProgress : getUiProgress();
+            final int progressTotal = clientSide ? syncedUiProgressTotal : getUiProgressTotal();
             return switch (index) {
-                case 0 -> (int) temperature;
-                case 1 -> targetTemperature;
-                case 2 -> energyStorage.getEnergyStored();
-                case 3 -> clientSide ? syncedUiProgress : getUiProgress();
-                case 4 -> clientSide ? syncedUiProgressTotal : getUiProgressTotal();
-                case 5 -> clientSide ? syncedUiHasOutput : (hasOutput() ? 1 : 0);
-                case 6 -> clientSide ? syncedUiRecipeTemperature : getUiRecipeTemperature();
-                case 7 -> clientSide ? syncedUiBoilingTicks : boilingTicks;
+                case DATA_TEMPERATURE -> (int) temperature;
+                case DATA_TARGET_TEMPERATURE -> targetTemperature;
+                case DATA_ENERGY_LOW -> low16(energyStorage.getEnergyStored());
+                case DATA_ENERGY_HIGH -> high16(energyStorage.getEnergyStored());
+                case DATA_PROGRESS_LOW -> low16(progress);
+                case DATA_PROGRESS_HIGH -> high16(progress);
+                case DATA_PROGRESS_TOTAL_LOW -> low16(progressTotal);
+                case DATA_PROGRESS_TOTAL_HIGH -> high16(progressTotal);
+                case DATA_HAS_OUTPUT -> clientSide ? syncedUiHasOutput : (hasOutput() ? 1 : 0);
+                case DATA_RECIPE_TEMPERATURE -> clientSide ? syncedUiRecipeTemperature : getUiRecipeTemperature();
+                case DATA_BOILING_TICKS_LOW -> low16(clientSide ? syncedUiBoilingTicks : boilingTicks);
+                case DATA_BOILING_TICKS_HIGH -> high16(clientSide ? syncedUiBoilingTicks : boilingTicks);
                 default -> 0;
             };
         }
@@ -160,14 +181,14 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
         {
             switch (index)
             {
-                case 0 -> temperature = value;
-                case 1 -> targetTemperature = Math.max(0, Math.min(MAX_TEMPERATURE, value));
-                case 2 -> setSyncedEnergy(value);
-                case 3 -> syncedUiProgress = value;
-                case 4 -> syncedUiProgressTotal = value;
-                case 5 -> syncedUiHasOutput = value;
-                case 6 -> syncedUiRecipeTemperature = value;
-                case 7 -> syncedUiBoilingTicks = value;
+                case DATA_TEMPERATURE -> temperature = value;
+                case DATA_TARGET_TEMPERATURE -> targetTemperature = Math.max(0, Math.min(MAX_TEMPERATURE, value));
+                case DATA_ENERGY_LOW, DATA_ENERGY_HIGH -> setSyncedEnergyPart(index, value);
+                case DATA_PROGRESS_LOW, DATA_PROGRESS_HIGH -> syncedUiProgress = setSyncedIntPart(syncedUiProgress, index == DATA_PROGRESS_LOW, value);
+                case DATA_PROGRESS_TOTAL_LOW, DATA_PROGRESS_TOTAL_HIGH -> syncedUiProgressTotal = setSyncedIntPart(syncedUiProgressTotal, index == DATA_PROGRESS_TOTAL_LOW, value);
+                case DATA_HAS_OUTPUT -> syncedUiHasOutput = value;
+                case DATA_RECIPE_TEMPERATURE -> syncedUiRecipeTemperature = value;
+                case DATA_BOILING_TICKS_LOW, DATA_BOILING_TICKS_HIGH -> syncedUiBoilingTicks = setSyncedIntPart(syncedUiBoilingTicks, index == DATA_BOILING_TICKS_LOW, value);
                 default -> {
                 }
             }
@@ -176,7 +197,7 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
         @Override
         public int getCount()
         {
-            return 8;
+            return DATA_COUNT;
         }
     };
 
@@ -205,7 +226,43 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
 
     private void setSyncedEnergy(int energy)
     {
-        energyStorage.deserializeNBT(IntTag.valueOf(Math.max(0, Math.min(ENERGY_CAPACITY, energy))));
+        final int clamped = Math.max(0, Math.min(ENERGY_CAPACITY, energy));
+        energyStorage.deserializeNBT(IntTag.valueOf(clamped));
+    }
+
+    private void setSyncedEnergyPart(int index, int value)
+    {
+        if (index == DATA_ENERGY_LOW)
+        {
+            syncedEnergyLow = value & 0xFFFF;
+        }
+        else if (index == DATA_ENERGY_HIGH)
+        {
+            syncedEnergyHigh = value & 0xFFFF;
+        }
+        setSyncedEnergy(combineUnsignedShorts(syncedEnergyLow, syncedEnergyHigh));
+    }
+
+    private static int setSyncedIntPart(int current, boolean lowPart, int value)
+    {
+        final int low = lowPart ? value & 0xFFFF : low16(current);
+        final int high = lowPart ? high16(current) : value & 0xFFFF;
+        return combineUnsignedShorts(low, high);
+    }
+
+    private static int low16(int value)
+    {
+        return value & 0xFFFF;
+    }
+
+    private static int high16(int value)
+    {
+        return (value >>> 16) & 0xFFFF;
+    }
+
+    private static int combineUnsignedShorts(int low, int high)
+    {
+        return ((high & 0xFFFF) << 16) | (low & 0xFFFF);
     }
 
     private void syncAutomationChange()

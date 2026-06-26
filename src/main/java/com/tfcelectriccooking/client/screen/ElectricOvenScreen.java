@@ -75,7 +75,7 @@ public class ElectricOvenScreen extends AbstractContainerScreen<ElectricOvenCont
         imageWidth = GUI_WIDTH;
         imageHeight = GUI_HEIGHT;
         inventoryLabelY = imageHeight - 94;
-        sliderTemperature = container.getBlockEntity().getSyncData().get(1);
+        sliderTemperature = getSyncedTargetTemperature(container);
     }
 
     @Override
@@ -112,7 +112,7 @@ public class ElectricOvenScreen extends AbstractContainerScreen<ElectricOvenCont
             return;
         }
 
-        final int syncedTargetTemperature = menu.getBlockEntity().getSyncData().get(1);
+        final int syncedTargetTemperature = getSyncedTargetTemperature();
         if (pendingTargetTemperature >= 0)
         {
             if (syncedTargetTemperature == pendingTargetTemperature || ++pendingTargetTicks > PENDING_TARGET_CONFIRM_TICKS)
@@ -176,7 +176,7 @@ public class ElectricOvenScreen extends AbstractContainerScreen<ElectricOvenCont
     {
         graphics.blit(TEMPERATURE_BAR, leftPos + TEMPERATURE_X, topPos + TEMPERATURE_TEXTURE_Y, 0, 0, TEMPERATURE_WIDTH, TEMPERATURE_TEXTURE_HEIGHT, TEMPERATURE_WIDTH, TEMPERATURE_TEXTURE_HEIGHT);
 
-        final int temperature = menu.getBlockEntity().getSyncData().get(0);
+        final int temperature = getSyncedTemperature();
         final int markerY = TEMPERATURE_MARKER_BOTTOM - Math.min(TEMPERATURE_RANGE, Heat.scaleTemperatureForGui(temperature));
         if (temperature > 0)
         {
@@ -188,7 +188,7 @@ public class ElectricOvenScreen extends AbstractContainerScreen<ElectricOvenCont
     {
         graphics.blit(BACKGROUND, leftPos + ENERGY_X, topPos + ENERGY_Y, 208, 39, ENERGY_WIDTH, ENERGY_HEIGHT);
 
-        final int energy = menu.getBlockEntity().getSyncData().get(2);
+        final int energy = getSyncedEnergy();
         final int fillHeight = Math.min(ENERGY_FILL_HEIGHT, Math.round(ENERGY_FILL_HEIGHT * energy / (float) ElectricOvenBlockEntity.ENERGY_CAPACITY));
         if (fillHeight > 0)
         {
@@ -200,7 +200,7 @@ public class ElectricOvenScreen extends AbstractContainerScreen<ElectricOvenCont
 
     private void drawCoil(GuiGraphics graphics)
     {
-        final int energy = menu.getBlockEntity().getSyncData().get(2);
+        final int energy = getSyncedEnergy();
         final boolean running = getDisplayedTargetTemperature() > 0 && energy >= ElectricOvenBlockEntity.ENERGY_PER_TICK;
         graphics.blit(BACKGROUND, leftPos + COIL_X, topPos + COIL_Y, 193, running ? 19 : 0, COIL_WIDTH, COIL_HEIGHT);
     }
@@ -224,7 +224,7 @@ public class ElectricOvenScreen extends AbstractContainerScreen<ElectricOvenCont
         sliderTemperature = clamped;
         pendingTargetTemperature = clamped;
         pendingTargetTicks = 0;
-        minecraft.gameMode.handleInventoryButtonClick(menu.containerId, clamped);
+        minecraft.gameMode.handleInventoryButtonClick(menu.containerId, ElectricOvenContainer.temperatureToButtonId(clamped));
     }
 
     private void renderCustomTooltips(GuiGraphics graphics, int mouseX, int mouseY)
@@ -236,7 +236,7 @@ public class ElectricOvenScreen extends AbstractContainerScreen<ElectricOvenCont
         }
         else if (isInside(mouseX, mouseY, TEMPERATURE_X, TEMPERATURE_Y, TEMPERATURE_WIDTH, TEMPERATURE_HEIGHT))
         {
-            final var text = TFCConfig.CLIENT.heatTooltipStyle.get().formatColored(menu.getBlockEntity().getSyncData().get(0));
+            final var text = TFCConfig.CLIENT.heatTooltipStyle.get().formatColored(getSyncedTemperature());
             if (text != null)
             {
                 graphics.renderTooltip(font, text, mouseX, mouseY);
@@ -244,7 +244,7 @@ public class ElectricOvenScreen extends AbstractContainerScreen<ElectricOvenCont
         }
         else if (isInside(mouseX, mouseY, ENERGY_X, ENERGY_Y, ENERGY_WIDTH, ENERGY_HEIGHT))
         {
-            final int energy = menu.getBlockEntity().getSyncData().get(2);
+            final int energy = getSyncedEnergy();
             graphics.renderTooltip(font, Component.translatable("tfcelectriccooking.tooltip.energy", energy, ElectricOvenBlockEntity.ENERGY_CAPACITY), mouseX, mouseY);
         }
     }
@@ -264,6 +264,29 @@ public class ElectricOvenScreen extends AbstractContainerScreen<ElectricOvenCont
         {
             return pendingTargetTemperature;
         }
-        return menu.getBlockEntity().getSyncData().get(1);
+        return getSyncedTargetTemperature();
+    }
+
+    private int getSyncedTemperature()
+    {
+        return menu.getBlockEntity().getSyncData().get(ElectricOvenBlockEntity.DATA_TEMPERATURE);
+    }
+
+    private int getSyncedTargetTemperature()
+    {
+        return getSyncedTargetTemperature(menu);
+    }
+
+    private static int getSyncedTargetTemperature(ElectricOvenContainer container)
+    {
+        return container.getBlockEntity().getSyncData().get(ElectricOvenBlockEntity.DATA_TARGET_TEMPERATURE);
+    }
+
+    private int getSyncedEnergy()
+    {
+        final var data = menu.getBlockEntity().getSyncData();
+        final int low = data.get(ElectricOvenBlockEntity.DATA_ENERGY_LOW) & 0xFFFF;
+        final int high = data.get(ElectricOvenBlockEntity.DATA_ENERGY_HIGH) & 0xFFFF;
+        return (high << 16) | low;
     }
 }

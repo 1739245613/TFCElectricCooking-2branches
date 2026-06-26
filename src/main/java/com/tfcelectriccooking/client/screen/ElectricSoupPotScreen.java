@@ -30,8 +30,6 @@ public class ElectricSoupPotScreen extends AbstractContainerScreen<ElectricSoupP
 
     private static final int GUI_WIDTH = 176;
     private static final int GUI_HEIGHT = 186;
-    private static final int POWER_ON_TEMPERATURE = 350;
-
     private static final int POWER_BUTTON_X = 8;
     private static final int POWER_BUTTON_Y = 80;
     private static final int POWER_BUTTON_WIDTH = 17;
@@ -151,8 +149,8 @@ public class ElectricSoupPotScreen extends AbstractContainerScreen<ElectricSoupP
     {
         if (button == 0 && isInside(mouseX, mouseY, POWER_BUTTON_X, POWER_BUTTON_Y, POWER_BUTTON_WIDTH, POWER_BUTTON_HEIGHT))
         {
-            final int targetTemperature = menu.getBlockEntity().getSyncData().get(1);
-            sendTargetTemperature(targetTemperature > 0 ? 0 : POWER_ON_TEMPERATURE);
+            final int targetTemperature = getSyncedTargetTemperature();
+            sendPowerButton(targetTemperature > 0 ? ElectricSoupPotContainer.BUTTON_STOP : ElectricSoupPotContainer.BUTTON_RUN);
             return true;
         }
         return super.mouseClicked(mouseX, mouseY, button);
@@ -162,7 +160,7 @@ public class ElectricSoupPotScreen extends AbstractContainerScreen<ElectricSoupP
     {
         graphics.blit(TEMPERATURE_BAR, leftPos + TEMPERATURE_X, topPos + TEMPERATURE_TEXTURE_Y, 0, 0, TEMPERATURE_WIDTH, TEMPERATURE_TEXTURE_HEIGHT, TEMPERATURE_WIDTH, TEMPERATURE_TEXTURE_HEIGHT);
 
-        final int temperature = menu.getBlockEntity().getSyncData().get(0);
+        final int temperature = getSyncedTemperature();
         if (temperature > 0)
         {
             final int markerY = TEMPERATURE_MARKER_BOTTOM - Math.min(TEMPERATURE_RANGE, Heat.scaleTemperatureForGui(temperature));
@@ -174,7 +172,7 @@ public class ElectricSoupPotScreen extends AbstractContainerScreen<ElectricSoupP
     {
         graphics.blit(BACKGROUND, leftPos + ENERGY_X, topPos + ENERGY_Y, 221, 0, ENERGY_WIDTH, ENERGY_HEIGHT);
 
-        final int energy = menu.getBlockEntity().getSyncData().get(2);
+        final int energy = getSyncedEnergy();
         final int fillHeight = Math.min(ENERGY_FILL_HEIGHT, Math.round(ENERGY_FILL_HEIGHT * energy / (float) ElectricSoupPotBlockEntity.ENERGY_CAPACITY));
         if (fillHeight > 0)
         {
@@ -186,7 +184,7 @@ public class ElectricSoupPotScreen extends AbstractContainerScreen<ElectricSoupP
 
     private void drawPowerButton(GuiGraphics graphics)
     {
-        final int targetTemperature = menu.getBlockEntity().getSyncData().get(1);
+        final int targetTemperature = getSyncedTargetTemperature();
         graphics.blit(BACKGROUND, leftPos + POWER_BUTTON_X, topPos + POWER_BUTTON_Y, 239, targetTemperature > 0 ? 19 : 0, POWER_BUTTON_WIDTH, POWER_BUTTON_HEIGHT);
     }
 
@@ -312,14 +310,14 @@ public class ElectricSoupPotScreen extends AbstractContainerScreen<ElectricSoupP
     {
         final PotRecipe.Output output = menu.getBlockEntity().getOutput();
         final FluidStack fluid = menu.getBlockEntity().getFluidInTank();
-        if ((output == null || output.isEmpty()) && fluid.isEmpty() && menu.getBlockEntity().getSyncData().get(4) <= 0)
+        if ((output == null || output.isEmpty()) && fluid.isEmpty() && getSyncedProgressTotal() <= 0)
         {
             return;
         }
 
         drawBubbleColumns(graphics, IDLE_BUBBLES_SRC_X, IDLE_BUBBLES_SRC_Y, BUBBLES_Y, BUBBLE_COLUMN_HEIGHT);
 
-        final int boilingTicks = menu.getBlockEntity().getSyncData().get(7);
+        final int boilingTicks = getSyncedBoilingTicks();
         if (boilingTicks > 0)
         {
             final int bubbleHeight = Math.max(1, Math.min(BUBBLE_COLUMN_HEIGHT, (boilingTicks % 35) * BUBBLE_COLUMN_HEIGHT / 35));
@@ -335,14 +333,14 @@ public class ElectricSoupPotScreen extends AbstractContainerScreen<ElectricSoupP
         graphics.blit(BACKGROUND, leftPos + BUBBLES_X + BUBBLE_COLUMN_GAP, topPos + destY, sourceX, sourceY, BUBBLE_COLUMN_WIDTH, height);
     }
 
-    private void sendTargetTemperature(int temperature)
+    private void sendPowerButton(int buttonId)
     {
         if (minecraft == null || minecraft.player == null || minecraft.gameMode == null)
         {
             return;
         }
 
-        final int clamped = Mth.clamp(temperature, 0, ElectricSoupPotBlockEntity.MAX_TEMPERATURE);
+        final int clamped = Mth.clamp(buttonId, ElectricSoupPotContainer.BUTTON_STOP, ElectricSoupPotContainer.BUTTON_RUN);
         if (menu.clickMenuButton(minecraft.player, clamped))
         {
             minecraft.gameMode.handleInventoryButtonClick(menu.containerId, clamped);
@@ -489,12 +487,12 @@ public class ElectricSoupPotScreen extends AbstractContainerScreen<ElectricSoupP
     {
         if (isInside(mouseX, mouseY, POWER_BUTTON_X, POWER_BUTTON_Y, POWER_BUTTON_WIDTH, POWER_BUTTON_HEIGHT))
         {
-            final int targetTemperature = menu.getBlockEntity().getSyncData().get(1);
+            final int targetTemperature = getSyncedTargetTemperature();
             graphics.renderTooltip(font, Component.translatable(targetTemperature > 0 ? "tfcelectriccooking.tooltip.running" : "tfcelectriccooking.tooltip.stopped"), mouseX, mouseY);
         }
         else if (isInside(mouseX, mouseY, TEMPERATURE_X, TEMPERATURE_Y, TEMPERATURE_WIDTH, TEMPERATURE_HEIGHT))
         {
-            final var text = TFCConfig.CLIENT.heatTooltipStyle.get().formatColored(menu.getBlockEntity().getSyncData().get(0));
+            final var text = TFCConfig.CLIENT.heatTooltipStyle.get().formatColored(getSyncedTemperature());
             if (text != null)
             {
                 graphics.renderTooltip(font, text, mouseX, mouseY);
@@ -502,7 +500,7 @@ public class ElectricSoupPotScreen extends AbstractContainerScreen<ElectricSoupP
         }
         else if (isInside(mouseX, mouseY, ENERGY_X, ENERGY_Y, ENERGY_WIDTH, ENERGY_HEIGHT))
         {
-            final int energy = menu.getBlockEntity().getSyncData().get(2);
+            final int energy = getSyncedEnergy();
             graphics.renderTooltip(font, Component.translatable("tfcelectriccooking.tooltip.energy", energy, ElectricSoupPotBlockEntity.ENERGY_CAPACITY), mouseX, mouseY);
         }
         else if (isInside(mouseX, mouseY, POT_CONTENT_X, POT_CONTENT_Y, POT_CONTENT_WIDTH, POT_CONTENT_HEIGHT))
@@ -519,5 +517,39 @@ public class ElectricSoupPotScreen extends AbstractContainerScreen<ElectricSoupP
     private boolean isInside(double mouseX, double mouseY, int x, int y, int width, int height)
     {
         return RenderHelpers.isInside((int) mouseX, (int) mouseY, leftPos + x, topPos + y, width, height);
+    }
+
+    private int getSyncedTemperature()
+    {
+        return menu.getBlockEntity().getSyncData().get(ElectricSoupPotBlockEntity.DATA_TEMPERATURE);
+    }
+
+    private int getSyncedTargetTemperature()
+    {
+        return menu.getBlockEntity().getSyncData().get(ElectricSoupPotBlockEntity.DATA_TARGET_TEMPERATURE);
+    }
+
+    private int getSyncedEnergy()
+    {
+        final var data = menu.getBlockEntity().getSyncData();
+        final int low = data.get(ElectricSoupPotBlockEntity.DATA_ENERGY_LOW) & 0xFFFF;
+        final int high = data.get(ElectricSoupPotBlockEntity.DATA_ENERGY_HIGH) & 0xFFFF;
+        return (high << 16) | low;
+    }
+
+    private int getSyncedProgressTotal()
+    {
+        final var data = menu.getBlockEntity().getSyncData();
+        final int low = data.get(ElectricSoupPotBlockEntity.DATA_PROGRESS_TOTAL_LOW) & 0xFFFF;
+        final int high = data.get(ElectricSoupPotBlockEntity.DATA_PROGRESS_TOTAL_HIGH) & 0xFFFF;
+        return (high << 16) | low;
+    }
+
+    private int getSyncedBoilingTicks()
+    {
+        final var data = menu.getBlockEntity().getSyncData();
+        final int low = data.get(ElectricSoupPotBlockEntity.DATA_BOILING_TICKS_LOW) & 0xFFFF;
+        final int high = data.get(ElectricSoupPotBlockEntity.DATA_BOILING_TICKS_HIGH) & 0xFFFF;
+        return (high << 16) | low;
     }
 }
