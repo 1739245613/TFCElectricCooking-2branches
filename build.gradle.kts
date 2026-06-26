@@ -112,6 +112,7 @@ tasks.withType<ProcessResources>().configureEach {
 }
 
 tasks.processResources {
+    inputs.property("jarVersion", project.version)
     filesMatching("META-INF/mods.toml") {
         expand("file" to mapOf("jarVersion" to project.version))
     }
