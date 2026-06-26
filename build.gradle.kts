@@ -15,7 +15,7 @@ val jadeVersion = "4614153"
 val tfcCurseVersion = "5872631"
 
 val modId = "tfcelectriccooking"
-val modVersion = System.getenv("VERSION") ?: "2.0.0"
+val modVersion = System.getenv("VERSION") ?: "2.0.1"
 val tfcSourceDir = "../TerraFirmaCraft-3.2.21-1.20"
 
 val tfcLocalJars = fileTree("$tfcSourceDir/build/libs") {
