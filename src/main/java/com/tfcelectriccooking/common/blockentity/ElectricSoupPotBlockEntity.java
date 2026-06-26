@@ -48,6 +48,7 @@ import net.dries007.tfc.common.component.food.FoodTrait;
 import net.dries007.tfc.common.component.food.FoodTraits;
 import net.dries007.tfc.common.recipes.JamPotRecipe;
 import net.dries007.tfc.common.recipes.PotRecipe;
+import net.dries007.tfc.common.recipes.RecipeHelpers;
 import net.dries007.tfc.common.recipes.TFCRecipeTypes;
 import net.dries007.tfc.common.recipes.outputs.PotOutput;
 import net.dries007.tfc.common.capabilities.SidedHandler;
@@ -73,7 +74,22 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
     public static final int ENERGY_CAPACITY = 16000;
     public static final int ENERGY_MAX_IO = 256;
     public static final int ENERGY_PER_TICK = 20;
-    public static final int MAX_TEMPERATURE = 600;
+    public static final int MAX_TEMPERATURE = 800;
+    public static final int DATA_TEMPERATURE = 0;
+    public static final int DATA_TARGET_TEMPERATURE = 1;
+    public static final int DATA_ENERGY_LOW = 2;
+    public static final int DATA_ENERGY_HIGH = 3;
+    public static final int DATA_PROGRESS_LOW = 4;
+    public static final int DATA_PROGRESS_HIGH = 5;
+    public static final int DATA_PROGRESS_TOTAL_LOW = 6;
+    public static final int DATA_PROGRESS_TOTAL_HIGH = 7;
+    public static final int DATA_HAS_OUTPUT = 8;
+    public static final int DATA_RECIPE_TEMPERATURE = 9;
+    public static final int DATA_BOILING_TICKS_LOW = 10;
+    public static final int DATA_BOILING_TICKS_HIGH = 11;
+    public static final int DATA_COUNT = 12;
+    private static final int SUGAR_WATER_AMOUNT = 500;
+    private static final int SUGAR_WATER_PER_JAM = 100;
     private static final @Nullable Field POT_RECIPE_TEMPERATURE_FIELD = findPotRecipeTemperatureField();
     private static final ResourceLocation FIRMA_LIFE_DRIED_TRAIT = ResourceLocation.fromNamespaceAndPath("firmalife", "dried");
     private static final ResourceLocation FIRMA_LIFE_SUGAR_WATER = ResourceLocation.fromNamespaceAndPath("firmalife", "sugar_water");
@@ -81,7 +97,7 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
     private static final TagKey<Item> FRUITS = TFCTags.Items.FRUITS;
     private static final TagKey<Fluid> SUGAR_WATER = TagKey.create(Registries.FLUID, FIRMA_LIFE_SUGAR_WATER);
 
-    private final EnergyStorage energyStorage = new EnergyStorage(ENERGY_CAPACITY, ENERGY_MAX_IO, ENERGY_MAX_IO, 0);
+    private final MutableEnergyStorage energyStorage = new MutableEnergyStorage(ENERGY_CAPACITY, ENERGY_MAX_IO, ENERGY_MAX_IO, 0);
     private final SidedHandler<IFluidHandler> sidedFluidInventory;
     private final AutomationItemHandler automationInventory;
     private final IFluidHandler automationFluidInventory;
@@ -93,6 +109,8 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
     private int preBoilingTicks;
     private float temperature = 0;
     private int targetTemperature = 0;
+    private int syncedEnergyLow = 0;
+    private int syncedEnergyHigh = 0;
     private boolean inventoryOutputReady;
     private boolean needsRecipeUpdate = true;
     private int lastRecipeTemperature;
@@ -100,6 +118,7 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
     private int syncedUiProgressTotal;
     private int syncedUiHasOutput;
     private int syncedUiRecipeTemperature;
+    private int syncedUiBoilingTicks;
 
     private final ContainerData syncData = new ContainerData()
     {
@@ -107,14 +126,22 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
         public int get(int index)
         {
             final boolean clientSide = getLevel() != null && getLevel().isClientSide;
+            final int progress = clientSide ? syncedUiProgress : getUiProgress();
+            final int progressTotal = clientSide ? syncedUiProgressTotal : getUiProgressTotal();
+            final int boiling = clientSide ? syncedUiBoilingTicks : boilingTicks;
             return switch (index) {
-                case 0 -> (int) temperature;
-                case 1 -> targetTemperature;
-                case 2 -> energyStorage.getEnergyStored();
-                case 3 -> clientSide ? syncedUiProgress : getUiProgress();
-                case 4 -> clientSide ? syncedUiProgressTotal : getUiProgressTotal();
-                case 5 -> clientSide ? syncedUiHasOutput : (hasOutput() ? 1 : 0);
-                case 6 -> clientSide ? syncedUiRecipeTemperature : getUiRecipeTemperature();
+                case DATA_TEMPERATURE -> (int) temperature;
+                case DATA_TARGET_TEMPERATURE -> targetTemperature;
+                case DATA_ENERGY_LOW -> low16(energyStorage.getEnergyStored());
+                case DATA_ENERGY_HIGH -> high16(energyStorage.getEnergyStored());
+                case DATA_PROGRESS_LOW -> low16(progress);
+                case DATA_PROGRESS_HIGH -> high16(progress);
+                case DATA_PROGRESS_TOTAL_LOW -> low16(progressTotal);
+                case DATA_PROGRESS_TOTAL_HIGH -> high16(progressTotal);
+                case DATA_HAS_OUTPUT -> clientSide ? syncedUiHasOutput : (hasOutput() ? 1 : 0);
+                case DATA_RECIPE_TEMPERATURE -> clientSide ? syncedUiRecipeTemperature : getUiRecipeTemperature();
+                case DATA_BOILING_TICKS_LOW -> low16(boiling);
+                case DATA_BOILING_TICKS_HIGH -> high16(boiling);
                 default -> 0;
             };
         }
@@ -123,18 +150,19 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
         public void set(int index, int value)
         {
             switch (index) {
-                case 0 -> temperature = value;
-                case 1 -> targetTemperature = Math.max(0, Math.min(MAX_TEMPERATURE, value));
-                case 2 -> {}
-                case 3 -> syncedUiProgress = value;
-                case 4 -> syncedUiProgressTotal = value;
-                case 5 -> syncedUiHasOutput = value;
-                case 6 -> syncedUiRecipeTemperature = value;
+                case DATA_TEMPERATURE -> temperature = value;
+                case DATA_TARGET_TEMPERATURE -> targetTemperature = Math.max(0, Math.min(MAX_TEMPERATURE, value));
+                case DATA_ENERGY_LOW, DATA_ENERGY_HIGH -> setSyncedEnergyPart(index, value);
+                case DATA_PROGRESS_LOW, DATA_PROGRESS_HIGH -> syncedUiProgress = setSyncedIntPart(syncedUiProgress, index == DATA_PROGRESS_LOW, value);
+                case DATA_PROGRESS_TOTAL_LOW, DATA_PROGRESS_TOTAL_HIGH -> syncedUiProgressTotal = setSyncedIntPart(syncedUiProgressTotal, index == DATA_PROGRESS_TOTAL_LOW, value);
+                case DATA_HAS_OUTPUT -> syncedUiHasOutput = value;
+                case DATA_RECIPE_TEMPERATURE -> syncedUiRecipeTemperature = value;
+                case DATA_BOILING_TICKS_LOW, DATA_BOILING_TICKS_HIGH -> syncedUiBoilingTicks = setSyncedIntPart(syncedUiBoilingTicks, index == DATA_BOILING_TICKS_LOW, value);
             }
         }
 
         @Override
-        public int getCount() { return 7; }
+        public int getCount() { return DATA_COUNT; }
     };
 
     public ElectricSoupPotBlockEntity(BlockPos pos, BlockState state)
@@ -142,9 +170,17 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
         super(ModBlocks.ELECTRIC_SOUP_POT_BLOCK_ENTITY.get(), pos, state,
             self -> new PotInventory((ElectricSoupPotBlockEntity) self), TFCElectricCooking.MOD_ID);
 
-        automationInventory = new AutomationItemHandler(getInventory().getItemHandler(), this::canAutomationInsertItem, this::canAutomationExtractItem);
-        automationFluidInventory = new AutomationFluidHandler(getInventory().getFluidHandler(), this::canAutomationFillFluid, this::canAutomationDrainFluid);
+        automationInventory = new AutomationItemHandler(getInventory().getItemHandler(), this::canAutomationInsertItem, this::canAutomationExtractItem, this::syncAutomationChange);
+        automationFluidInventory = new AutomationFluidHandler(getInventory().getFluidHandler(), this::canAutomationFillFluid, this::canAutomationDrainFluid, this::syncAutomationChange);
         sidedFluidInventory = new SidedHandler<>(getInventory());
+    }
+
+    private void syncAutomationChange()
+    {
+        setChanged();
+        needsRecipeUpdate = true;
+        cleanupOutputState();
+        markForSync();
     }
 
     public void serverTick()
@@ -180,6 +216,7 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
         if (wasPowered != shouldPower)
         {
             level.setBlockAndUpdate(worldPosition, getBlockState().setValue(ElectricSoupPotBlock.POWERED, shouldPower));
+            markForSync();
         }
     }
 
@@ -220,29 +257,47 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
             if (preBoilingTicks < PRE_BOIL_TIME)
             {
                 preBoilingTicks++;
+                if (preBoilingTicks == PRE_BOIL_TIME)
+                {
+                    markForSync();
+                }
                 return;
             }
 
-            // 4x speed: increment by SPEED_MULTIPLIER instead of 1
             boilingTicks += SPEED_MULTIPLIER;
+            if (boilingTicks == SPEED_MULTIPLIER)
+            {
+                markForSync();
+            }
             if (boilingTicks >= cachedRecipe.getDuration())
             {
-                // Recipe complete
                 final PotInventory inv = getInventory();
-                final PotOutput finishedOutput = cachedRecipe.getOutput(inv);
+                final PotRecipe recipe = cachedRecipe;
+                final PotInventory recipeInventory = copyRecipeInventory(inv);
+                final PotOutput finishedOutput;
+
+                RecipeHelpers.setCraftingInput(recipeInventory, recipeInventory.inputStart(), recipeInventory.inputEnd() + 1);
+                try
+                {
+                    finishedOutput = recipe.getOutput(recipeInventory);
+                }
+                finally
+                {
+                    RecipeHelpers.clearCraftingInput();
+                }
+
+                inv.getFluidHandler().drain(recipe.getFluidIngredient().amount(), IFluidHandler.FluidAction.EXECUTE);
+                final FluidStack fluidAfterIngredient = inv.getFluidInTank(0).copy();
+                for (int slot = inv.inputStart(); slot <= inv.inputEnd(); slot++)
+                {
+                    inv.setStackInSlot(slot, inv.getStackInSlot(slot).getCraftingRemainingItem());
+                }
+
                 finishedOutput.onFinish(inv);
+                restoreRecipeFluidRemainder(inv, recipeInventory, fluidAfterIngredient);
                 output = finishedOutput.isEmpty() ? null : finishedOutput;
                 inventoryOutputReady = output == null && hasAnyInputItem();
-                lastRecipeTemperature = Math.round(readRecipeTemperature(cachedRecipe));
-
-                if (output != null)
-                {
-                    for (int i = SLOT_INPUT_START; i <= SLOT_INPUT_END; i++)
-                    {
-                        inv.getItemHandler().setStackInSlot(i, ItemStack.EMPTY);
-                    }
-                    inv.clearFluid();
-                }
+                lastRecipeTemperature = Math.round(readRecipeTemperature(recipe));
 
                 cachedRecipe = null;
                 cachedSpecialRecipe = null;
@@ -265,15 +320,44 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
         }
     }
 
+    private PotInventory copyRecipeInventory(PotInventory source)
+    {
+        final PotInventory copy = new PotInventory(this, false);
+        for (int slot = source.inputStart(); slot <= source.inputEnd(); slot++)
+        {
+            copy.setStackInSlot(slot, source.getStackInSlot(slot).copy());
+        }
+        copy.setFluid(source.getFluidInTank(0).copy());
+        return copy;
+    }
+
+    private void restoreRecipeFluidRemainder(PotInventory inv, PotInventory recipeInventory, FluidStack fluidAfterIngredient)
+    {
+        final FluidStack recipeFluid = recipeInventory.getFluidInTank(0);
+        final FluidStack currentFluid = inv.getFluidInTank(0);
+        if (recipeFluid.isEmpty() && currentFluid.isEmpty() && !fluidAfterIngredient.isEmpty())
+        {
+            inv.setFluid(fluidAfterIngredient);
+        }
+    }
+
     private void handleSpecialCooking(SpecialRecipe recipe)
     {
         if (preBoilingTicks < PRE_BOIL_TIME)
         {
             preBoilingTicks++;
+            if (preBoilingTicks == PRE_BOIL_TIME)
+            {
+                markForSync();
+            }
             return;
         }
 
         boilingTicks += SPEED_MULTIPLIER;
+        if (boilingTicks == SPEED_MULTIPLIER)
+        {
+            markForSync();
+        }
         if (boilingTicks >= recipe.duration)
         {
             if (recipe == SpecialRecipe.SUGAR_WATER)
@@ -299,10 +383,12 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
 
     private void finishSugarWaterRecipe()
     {
-        consumeOneSweetener();
-
-        getInventory().getFluidHandler().drain(Integer.MAX_VALUE, IFluidHandler.FluidAction.EXECUTE);
-        getInventory().setFluid(new FluidStack(BuiltInRegistries.FLUID.get(FIRMA_LIFE_SUGAR_WATER), FluidHelpers.BUCKET_VOLUME));
+        final int amount = getSugarWaterConversionAmount();
+        if (amount > 0)
+        {
+            consumeSweeteners(amount / SUGAR_WATER_AMOUNT);
+            getInventory().setFluid(new FluidStack(BuiltInRegistries.FLUID.get(FIRMA_LIFE_SUGAR_WATER), amount));
+        }
 
         output = null;
         inventoryOutputReady = false;
@@ -316,7 +402,7 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
             return PotOutput.EMPTY_INSTANCE;
         }
 
-        getInventory().getFluidHandler().drain(Integer.MAX_VALUE, IFluidHandler.FluidAction.EXECUTE);
+        getInventory().getFluidHandler().drain(batch.count * SUGAR_WATER_PER_JAM, IFluidHandler.FluidAction.EXECUTE);
         int remaining = batch.count;
         for (int slot = SLOT_INPUT_START; slot <= SLOT_INPUT_END && remaining > 0; slot++)
         {
@@ -349,13 +435,35 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
 
     private boolean matchesSugarWaterRecipe()
     {
+        return getSugarWaterConversionAmount() > 0 && BuiltInRegistries.FLUID.containsKey(FIRMA_LIFE_SUGAR_WATER);
+    }
+
+    private boolean matchesSugarWaterJamRecipe()
+    {
         final FluidStack fluid = getInventory().getFluidHandler().getFluidInTank(0);
-        if (fluid.getAmount() < FluidHelpers.BUCKET_VOLUME || fluid.getFluid() != Fluids.WATER)
+        final FruitBatch batch = getSingleFruitBatch();
+        return fluid.getAmount() >= SUGAR_WATER_PER_JAM
+            && isSugarWaterFluid(fluid)
+            && batch != null
+            && fluid.getAmount() >= batch.count * SUGAR_WATER_PER_JAM;
+    }
+
+    private int getSugarWaterConversionAmount()
+    {
+        final FluidStack fluid = getInventory().getFluidHandler().getFluidInTank(0);
+        if (fluid.getAmount() < SUGAR_WATER_AMOUNT || fluid.getAmount() % SUGAR_WATER_AMOUNT != 0 || fluid.getFluid() != Fluids.WATER)
         {
-            return false;
+            return 0;
         }
 
-        boolean foundSweetener = false;
+        final int sweetenerCount = countSweeteners();
+        final int requiredSweeteners = fluid.getAmount() / SUGAR_WATER_AMOUNT;
+        return sweetenerCount >= requiredSweeteners ? fluid.getAmount() : 0;
+    }
+
+    private int countSweeteners()
+    {
+        int count = 0;
         for (int slot = SLOT_INPUT_START; slot <= SLOT_INPUT_END; slot++)
         {
             final ItemStack stack = getInventory().getItemHandler().getStackInSlot(slot);
@@ -365,31 +473,28 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
             }
             if (!Helpers.isItem(stack, SWEETENER))
             {
-                return false;
+                return -1;
             }
-            foundSweetener = true;
+            count += stack.getCount();
         }
-        return foundSweetener && BuiltInRegistries.FLUID.containsKey(FIRMA_LIFE_SUGAR_WATER);
+        return count;
     }
 
-    private boolean matchesSugarWaterJamRecipe()
-    {
-        final FluidStack fluid = getInventory().getFluidHandler().getFluidInTank(0);
-        return fluid.getAmount() >= FluidHelpers.BUCKET_VOLUME
-            && isSugarWaterFluid(fluid)
-            && getSingleFruitBatch() != null;
-    }
-
-    private void consumeOneSweetener()
+    private void consumeSweeteners(int amount)
     {
         for (int slot = SLOT_INPUT_START; slot <= SLOT_INPUT_END; slot++)
         {
             final ItemStack stack = getInventory().getItemHandler().getStackInSlot(slot);
             if (!stack.isEmpty() && Helpers.isItem(stack, SWEETENER))
             {
-                stack.shrink(1);
+                final int consumed = Math.min(stack.getCount(), amount);
+                stack.shrink(consumed);
                 getInventory().getItemHandler().setStackInSlot(slot, stack);
-                return;
+                amount -= consumed;
+                if (amount <= 0)
+                {
+                    return;
+                }
             }
         }
     }
@@ -628,7 +733,7 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
 
     public boolean shouldRenderAsBoiling()
     {
-        return boilingTicks > 0;
+        return isBoiling() || boilingTicks > 0 || preBoilingTicks > 0;
     }
 
     public int getBoilingTicks()
@@ -776,6 +881,44 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
     public ContainerData getSyncData()
     {
         return syncData;
+    }
+
+    private void setSyncedEnergy(int energy)
+    {
+        energyStorage.setEnergy(energy);
+    }
+
+    private void setSyncedEnergyPart(int index, int value)
+    {
+        if (index == DATA_ENERGY_LOW)
+        {
+            syncedEnergyLow = value;
+        }
+        else if (index == DATA_ENERGY_HIGH)
+        {
+            syncedEnergyHigh = value;
+        }
+        setSyncedEnergy(combineUnsignedShorts(syncedEnergyLow, syncedEnergyHigh));
+    }
+
+    private static int setSyncedIntPart(int current, boolean lowPart, int value)
+    {
+        return lowPart ? combineUnsignedShorts(value, high16(current)) : combineUnsignedShorts(low16(current), value);
+    }
+
+    private static int low16(int value)
+    {
+        return value & 0xFFFF;
+    }
+
+    private static int high16(int value)
+    {
+        return (value >>> 16) & 0xFFFF;
+    }
+
+    private static int combineUnsignedShorts(int low, int high)
+    {
+        return ((high & 0xFFFF) << 16) | (low & 0xFFFF);
     }
 
     @Nullable
@@ -934,6 +1077,19 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
 
     private record FruitBatch(ItemStack sample, int count, ItemStack unsealed, ItemStack sealed, ResourceLocation texture) {}
 
+    private static final class MutableEnergyStorage extends EnergyStorage
+    {
+        private MutableEnergyStorage(int capacity, int maxReceive, int maxExtract, int energy)
+        {
+            super(capacity, maxReceive, maxExtract, energy);
+        }
+
+        private void setEnergy(int energy)
+        {
+            this.energy = Math.max(0, Math.min(capacity, energy));
+        }
+    }
+
     /**
      * Inner inventory class implementing IPotInventory for PotRecipe compatibility.
      */
@@ -942,10 +1098,17 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
         private final ElectricSoupPotBlockEntity pot;
         private final ItemStackHandler inventory;
         private final FluidTank tank;
+        private final boolean syncChanges;
 
         public PotInventory(ElectricSoupPotBlockEntity pot)
         {
+            this(pot, true);
+        }
+
+        private PotInventory(ElectricSoupPotBlockEntity pot, boolean syncChanges)
+        {
             this.pot = pot;
+            this.syncChanges = syncChanges;
             this.inventory = new ItemStackHandler(INPUT_SLOTS)
             {
                 @Override
@@ -954,7 +1117,10 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
                 @Override
                 protected void onContentsChanged(int slot)
                 {
-                    pot.setAndUpdateSlots(slot);
+                    if (PotInventory.this.syncChanges)
+                    {
+                        pot.setAndUpdateSlots(slot);
+                    }
                 }
             };
             this.tank = new FluidTank(FluidHelpers.BUCKET_VOLUME)
@@ -968,7 +1134,10 @@ public class ElectricSoupPotBlockEntity extends TickableInventoryBlockEntity<Ele
                 @Override
                 protected void onContentsChanged()
                 {
-                    pot.setAndUpdateSlots(-1);
+                    if (PotInventory.this.syncChanges)
+                    {
+                        pot.setAndUpdateSlots(-1);
+                    }
                 }
             };
         }

@@ -11,18 +11,33 @@ public final class AutomationItemHandler implements IItemHandlerModifiable
     private final IItemHandlerModifiable delegate;
     private final BiPredicate<Integer, ItemStack> canInsert;
     private final IntPredicate canExtract;
+    private final Runnable onChanged;
 
     public AutomationItemHandler(IItemHandlerModifiable delegate, BiPredicate<Integer, ItemStack> canInsert, IntPredicate canExtract)
+    {
+        this(delegate, canInsert, canExtract, () -> {});
+    }
+
+    public AutomationItemHandler(IItemHandlerModifiable delegate, BiPredicate<Integer, ItemStack> canInsert, IntPredicate canExtract, Runnable onChanged)
     {
         this.delegate = delegate;
         this.canInsert = canInsert;
         this.canExtract = canExtract;
+        this.onChanged = onChanged;
     }
 
     @Override
     public void setStackInSlot(int slot, ItemStack stack)
     {
-        delegate.setStackInSlot(slot, stack);
+        if (stack.isEmpty() || canInsert.test(slot, stack))
+        {
+            final ItemStack before = delegate.getStackInSlot(slot).copy();
+            delegate.setStackInSlot(slot, stack);
+            if (!ItemStack.matches(before, delegate.getStackInSlot(slot)))
+            {
+                onChanged.run();
+            }
+        }
     }
 
     @Override
@@ -42,14 +57,24 @@ public final class AutomationItemHandler implements IItemHandlerModifiable
     @Override
     public ItemStack insertItem(int slot, ItemStack stack, boolean simulate)
     {
-        return stack.isEmpty() || canInsert.test(slot, stack) ? delegate.insertItem(slot, stack, simulate) : stack;
+        final ItemStack remainder = stack.isEmpty() || canInsert.test(slot, stack) ? delegate.insertItem(slot, stack, simulate) : stack;
+        if (!simulate && remainder.getCount() != stack.getCount())
+        {
+            onChanged.run();
+        }
+        return remainder;
     }
 
     @NotNull
     @Override
     public ItemStack extractItem(int slot, int amount, boolean simulate)
     {
-        return canExtract.test(slot) ? delegate.extractItem(slot, amount, simulate) : ItemStack.EMPTY;
+        final ItemStack extracted = canExtract.test(slot) ? delegate.extractItem(slot, amount, simulate) : ItemStack.EMPTY;
+        if (!simulate && !extracted.isEmpty())
+        {
+            onChanged.run();
+        }
+        return extracted;
     }
 
     @Override

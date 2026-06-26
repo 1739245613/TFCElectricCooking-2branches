@@ -5,6 +5,7 @@ import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import com.tfcelectriccooking.common.ModBlocks;
 import com.tfcelectriccooking.common.ModContainerTypes;
+import com.tfcelectriccooking.client.render.ElectricOvenBlockEntityRenderer;
 import com.tfcelectriccooking.client.render.ElectricSoupPotBlockEntityRenderer;
 import com.tfcelectriccooking.client.screen.ElectricOvenScreen;
 import com.tfcelectriccooking.client.screen.ElectricSoupPotScreen;
@@ -25,6 +26,7 @@ public class ModClientEvents
 
     private static void registerRenderers(EntityRenderersEvent.RegisterRenderers event)
     {
+        event.registerBlockEntityRenderer(ModBlocks.ELECTRIC_OVEN_BLOCK_ENTITY.get(), ElectricOvenBlockEntityRenderer::new);
         event.registerBlockEntityRenderer(ModBlocks.ELECTRIC_SOUP_POT_BLOCK_ENTITY.get(), ElectricSoupPotBlockEntityRenderer::new);
     }
 }

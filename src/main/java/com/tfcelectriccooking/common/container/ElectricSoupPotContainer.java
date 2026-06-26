@@ -6,10 +6,15 @@ import net.minecraft.world.item.ItemStack;
 import net.dries007.tfc.common.container.BlockEntityContainer;
 import net.dries007.tfc.common.container.slot.CallbackSlot;
 import com.tfcelectriccooking.common.ModContainerTypes;
+import com.tfcelectriccooking.common.block.ElectricSoupPotBlock;
 import com.tfcelectriccooking.common.blockentity.ElectricSoupPotBlockEntity;
 
 public class ElectricSoupPotContainer extends BlockEntityContainer<ElectricSoupPotBlockEntity>
 {
+    public static final int BUTTON_STOP = 0;
+    public static final int BUTTON_RUN = 1;
+    private static final int RUNNING_TEMPERATURE = 350;
+
     public static ElectricSoupPotContainer create(ElectricSoupPotBlockEntity pot, Inventory playerInv, int windowId)
     {
         return new ElectricSoupPotContainer(pot, windowId).init(playerInv, 20);
@@ -25,12 +30,11 @@ public class ElectricSoupPotContainer extends BlockEntityContainer<ElectricSoupP
     protected void addContainerSlots()
     {
         final ElectricSoupPotBlockEntity pot = getBlockEntity();
-        // 5 ingredient slots in diamond pattern (like TFC clay pot)
-        addSlot(new CallbackSlot(pot, 0, 65, 23));
-        addSlot(new CallbackSlot(pot, 1, 83, 23));
-        addSlot(new CallbackSlot(pot, 2, 56, 41));
-        addSlot(new CallbackSlot(pot, 3, 74, 41));
-        addSlot(new CallbackSlot(pot, 4, 92, 41));
+        addSlot(new CallbackSlot(pot, 0, 43, 39));
+        addSlot(new CallbackSlot(pot, 1, 61, 39));
+        addSlot(new CallbackSlot(pot, 2, 34, 57));
+        addSlot(new CallbackSlot(pot, 3, 52, 57));
+        addSlot(new CallbackSlot(pot, 4, 70, 57));
     }
 
     @Override
@@ -50,12 +54,21 @@ public class ElectricSoupPotContainer extends BlockEntityContainer<ElectricSoupP
     @Override
     public boolean clickMenuButton(Player player, int id)
     {
-        // Direct temperature setting: id = temperature value (0-600)
-        if (id >= 0 && id <= ElectricSoupPotBlockEntity.MAX_TEMPERATURE)
+        if (id == BUTTON_STOP || id == BUTTON_RUN)
         {
-            getBlockEntity().setTargetTemperature(id);
+            getBlockEntity().setTargetTemperature(id == BUTTON_RUN ? RUNNING_TEMPERATURE : 0);
             return true;
         }
         return false;
+    }
+
+    @Override
+    public void removed(Player player)
+    {
+        if (!player.level().isClientSide)
+        {
+            ElectricSoupPotBlock.setOpen(player.level(), getBlockEntity().getBlockPos(), getBlockEntity().getBlockState(), false);
+        }
+        super.removed(player);
     }
 }

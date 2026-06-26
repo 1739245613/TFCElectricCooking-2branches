@@ -1,8 +1,18 @@
 package com.tfcelectriccooking.common.block;
 
+import com.tfcelectriccooking.common.ModBlocks;
+import com.tfcelectriccooking.common.ModSounds;
+import com.tfcelectriccooking.common.blockentity.ElectricSoupPotBlockEntity;
+import net.dries007.tfc.client.particle.TFCParticles;
+import net.dries007.tfc.common.blockentities.InventoryBlockEntity;
+import net.dries007.tfc.util.Helpers;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -26,14 +36,12 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
-import net.dries007.tfc.common.blockentities.InventoryBlockEntity;
-import com.tfcelectriccooking.common.ModBlocks;
-import com.tfcelectriccooking.common.blockentity.ElectricSoupPotBlockEntity;
 
 public class ElectricSoupPotBlock extends Block implements EntityBlock
 {
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
     public static final BooleanProperty POWERED = BooleanProperty.create("powered");
+    public static final BooleanProperty OPEN = BlockStateProperties.OPEN;
     private static final VoxelShape SHAPE = Block.box(2, 0, 2, 14, 14, 14);
 
     public ElectricSoupPotBlock()
@@ -46,13 +54,14 @@ public class ElectricSoupPotBlock extends Block implements EntityBlock
             .lightLevel(state -> state.getValue(POWERED) ? 10 : 0));
         registerDefaultState(stateDefinition.any()
             .setValue(FACING, Direction.NORTH)
-            .setValue(POWERED, false));
+            .setValue(POWERED, false)
+            .setValue(OPEN, false));
     }
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder)
     {
-        builder.add(FACING, POWERED);
+        builder.add(FACING, POWERED, OPEN);
     }
 
     @Nullable
@@ -86,6 +95,23 @@ public class ElectricSoupPotBlock extends Block implements EntityBlock
     }
 
     @Override
+    public void animateTick(BlockState state, Level level, BlockPos pos, RandomSource random)
+    {
+        if (level.getBlockEntity(pos) instanceof ElectricSoupPotBlockEntity pot && pot.shouldRenderAsBoiling())
+        {
+            final double x = pos.getX() + 0.5;
+            final double y = pos.getY();
+            final double z = pos.getZ() + 0.5;
+            for (int i = 0; i < random.nextInt(5) + 4; i++)
+            {
+                level.addParticle(TFCParticles.BUBBLE.get(), false, x + random.nextFloat() * 0.375 - 0.1875, y + 0.625, z + random.nextFloat() * 0.375 - 0.1875, 0, 0.05D, 0);
+            }
+            level.addParticle(TFCParticles.STEAM.get(), false, x, y + 0.8, z, Helpers.triangle(random), 0.5, Helpers.triangle(random));
+            level.playLocalSound(x, y, z, SoundEvents.WATER_AMBIENT, SoundSource.BLOCKS, 1.0F, random.nextFloat() * 0.7F + 0.4F, false);
+        }
+    }
+
+    @Override
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit)
     {
         if (level.getBlockEntity(pos) instanceof ElectricSoupPotBlockEntity pot)
@@ -95,27 +121,48 @@ public class ElectricSoupPotBlock extends Block implements EntityBlock
                 return ItemInteractionResult.sidedSuccess(true);
             }
 
-            // Try to interact with output first (e.g., extracting soup bowls)
+            if (player.isShiftKeyDown())
+            {
+                final boolean open = !state.getValue(OPEN);
+                setOpen(level, pos, state, open);
+                player.displayClientMessage(Component.translatable(open ? "tfcelectriccooking.message.container_open" : "tfcelectriccooking.message.container_closed"), true);
+                return ItemInteractionResult.sidedSuccess(false);
+            }
+
             final ItemInteractionResult outputResult = pot.interactWithOutput(player, stack);
             if (outputResult != ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION)
             {
                 return outputResult;
             }
 
-            // Try to insert/extract fluid via bucket interaction
             if (pot.handleFluidInteraction(player, hand, stack))
             {
                 return ItemInteractionResult.sidedSuccess(level.isClientSide());
             }
 
-            // Open GUI
             if (player instanceof ServerPlayer serverPlayer)
             {
+                setOpen(level, pos, state, true);
                 serverPlayer.openMenu(pot, pos);
             }
             return ItemInteractionResult.sidedSuccess(level.isClientSide());
         }
         return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+    }
+
+    public static void setOpen(Level level, BlockPos pos, BlockState state, boolean open)
+    {
+        BlockState currentState = level.getBlockState(pos);
+        if (!currentState.is(state.getBlock()))
+        {
+            currentState = state;
+        }
+
+        if (currentState.hasProperty(OPEN) && currentState.getValue(OPEN) != open)
+        {
+            level.setBlockAndUpdate(pos, currentState.setValue(OPEN, open));
+            Helpers.playSound(level, pos, open ? ModSounds.ELECTRIC_SOUP_POT_OPEN.get() : ModSounds.ELECTRIC_SOUP_POT_CLOSE.get());
+        }
     }
 
     @SuppressWarnings("deprecation")

@@ -9,7 +9,7 @@ val parchmentMinecraftVersion: String = "1.21.1"
 val jeiVersion: String = "19.25.0.321"
 
 val modId: String = "tfcelectriccooking"
-val modVersion: String = System.getenv("VERSION") ?: "1.1.0"
+val modVersion: String = System.getenv("VERSION") ?: "2.0.1"
 val modJavaVersion: String = "21"
 
 // Paths to reference source dependencies (compiled classes)
@@ -151,6 +151,7 @@ tasks.withType<JavaCompile>().configureEach {
 
 tasks.processResources {
     val jarVersion = modVersion
+    inputs.property("jarVersion", jarVersion)
     filesMatching("META-INF/neoforge.mods.toml") {
         expand("file" to mapOf("jarVersion" to jarVersion))
     }

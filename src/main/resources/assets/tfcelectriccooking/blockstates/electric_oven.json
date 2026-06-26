@@ -1,12 +1,68 @@
 {
-  "variants": {
-    "facing=north,powered=false": { "model": "tfcelectriccooking:block/electric_oven" },
-    "facing=south,powered=false": { "model": "tfcelectriccooking:block/electric_oven", "y": 180 },
-    "facing=west,powered=false": { "model": "tfcelectriccooking:block/electric_oven", "y": 270 },
-    "facing=east,powered=false": { "model": "tfcelectriccooking:block/electric_oven", "y": 90 },
-    "facing=north,powered=true": { "model": "tfcelectriccooking:block/electric_oven_on" },
-    "facing=south,powered=true": { "model": "tfcelectriccooking:block/electric_oven_on", "y": 180 },
-    "facing=west,powered=true": { "model": "tfcelectriccooking:block/electric_oven_on", "y": 270 },
-    "facing=east,powered=true": { "model": "tfcelectriccooking:block/electric_oven_on", "y": 90 }
-  }
+  "multipart": [
+    {
+      "when": { "powered": "false", "open": "false", "facing": "north" },
+      "apply": { "model": "tfcelectriccooking:block/electric_oven_off_close" }
+    },
+    {
+      "when": { "powered": "false", "open": "false", "facing": "south" },
+      "apply": { "model": "tfcelectriccooking:block/electric_oven_off_close", "y": 180 }
+    },
+    {
+      "when": { "powered": "false", "open": "false", "facing": "west" },
+      "apply": { "model": "tfcelectriccooking:block/electric_oven_off_close", "y": 270 }
+    },
+    {
+      "when": { "powered": "false", "open": "false", "facing": "east" },
+      "apply": { "model": "tfcelectriccooking:block/electric_oven_off_close", "y": 90 }
+    },
+    {
+      "when": { "powered": "false", "open": "true", "facing": "north" },
+      "apply": { "model": "tfcelectriccooking:block/electric_oven_off_open" }
+    },
+    {
+      "when": { "powered": "false", "open": "true", "facing": "south" },
+      "apply": { "model": "tfcelectriccooking:block/electric_oven_off_open", "y": 180 }
+    },
+    {
+      "when": { "powered": "false", "open": "true", "facing": "west" },
+      "apply": { "model": "tfcelectriccooking:block/electric_oven_off_open", "y": 270 }
+    },
+    {
+      "when": { "powered": "false", "open": "true", "facing": "east" },
+      "apply": { "model": "tfcelectriccooking:block/electric_oven_off_open", "y": 90 }
+    },
+    {
+      "when": { "powered": "true", "open": "false", "facing": "north" },
+      "apply": { "model": "tfcelectriccooking:block/electric_oven_on_close" }
+    },
+    {
+      "when": { "powered": "true", "open": "false", "facing": "south" },
+      "apply": { "model": "tfcelectriccooking:block/electric_oven_on_close", "y": 180 }
+    },
+    {
+      "when": { "powered": "true", "open": "false", "facing": "west" },
+      "apply": { "model": "tfcelectriccooking:block/electric_oven_on_close", "y": 270 }
+    },
+    {
+      "when": { "powered": "true", "open": "false", "facing": "east" },
+      "apply": { "model": "tfcelectriccooking:block/electric_oven_on_close", "y": 90 }
+    },
+    {
+      "when": { "powered": "true", "open": "true", "facing": "north" },
+      "apply": { "model": "tfcelectriccooking:block/electric_oven_on_open" }
+    },
+    {
+      "when": { "powered": "true", "open": "true", "facing": "south" },
+      "apply": { "model": "tfcelectriccooking:block/electric_oven_on_open", "y": 180 }
+    },
+    {
+      "when": { "powered": "true", "open": "true", "facing": "west" },
+      "apply": { "model": "tfcelectriccooking:block/electric_oven_on_open", "y": 270 }
+    },
+    {
+      "when": { "powered": "true", "open": "true", "facing": "east" },
+      "apply": { "model": "tfcelectriccooking:block/electric_oven_on_open", "y": 90 }
+    }
+  ]
 }

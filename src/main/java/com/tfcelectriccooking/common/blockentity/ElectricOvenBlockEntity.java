@@ -33,18 +33,25 @@ import com.tfcelectriccooking.common.container.ElectricOvenContainer;
 
 public class ElectricOvenBlockEntity extends TickableInventoryBlockEntity<ItemStackHandler>
 {
-    public static final int SLOTS = 10;
+    public static final int SLOTS = 6;
     public static final int ENERGY_CAPACITY = 16000;
     public static final int ENERGY_MAX_IO = 256;
     public static final int ENERGY_PER_TICK = 20;
-    public static final int MAX_TEMPERATURE = 600;
+    public static final int MAX_TEMPERATURE = 800;
+    public static final int DATA_TEMPERATURE = 0;
+    public static final int DATA_TARGET_TEMPERATURE = 1;
+    public static final int DATA_ENERGY_LOW = 2;
+    public static final int DATA_ENERGY_HIGH = 3;
+    public static final int DATA_COUNT = 4;
 
-    private final EnergyStorage energyStorage = new EnergyStorage(ENERGY_CAPACITY, ENERGY_MAX_IO, ENERGY_MAX_IO, 0);
+    private final MutableEnergyStorage energyStorage = new MutableEnergyStorage(ENERGY_CAPACITY, ENERGY_MAX_IO, ENERGY_MAX_IO, 0);
     private final WrappedHeatingRecipe[] cachedRecipes = new WrappedHeatingRecipe[SLOTS];
     private final boolean[] completedSlots = new boolean[SLOTS];
     private final AutomationItemHandler automationInventory;
     private float temperature = 0;
     private int targetTemperature = 0;
+    private int syncedEnergyLow = 0;
+    private int syncedEnergyHigh = 0;
     private boolean needsRecipeUpdate = true;
 
     // Synced data for GUI
@@ -54,9 +61,10 @@ public class ElectricOvenBlockEntity extends TickableInventoryBlockEntity<ItemSt
         public int get(int index)
         {
             return switch (index) {
-                case 0 -> (int) temperature;
-                case 1 -> targetTemperature;
-                case 2 -> energyStorage.getEnergyStored();
+                case DATA_TEMPERATURE -> (int) temperature;
+                case DATA_TARGET_TEMPERATURE -> targetTemperature;
+                case DATA_ENERGY_LOW -> low16(energyStorage.getEnergyStored());
+                case DATA_ENERGY_HIGH -> high16(energyStorage.getEnergyStored());
                 default -> 0;
             };
         }
@@ -65,20 +73,26 @@ public class ElectricOvenBlockEntity extends TickableInventoryBlockEntity<ItemSt
         public void set(int index, int value)
         {
             switch (index) {
-                case 0 -> temperature = value;
-                case 1 -> targetTemperature = Math.max(0, Math.min(MAX_TEMPERATURE, value));
-                case 2 -> {} // energy is read-only from client
+                case DATA_TEMPERATURE -> temperature = value;
+                case DATA_TARGET_TEMPERATURE -> targetTemperature = Math.max(0, Math.min(MAX_TEMPERATURE, value));
+                case DATA_ENERGY_LOW, DATA_ENERGY_HIGH -> setSyncedEnergyPart(index, value);
             }
         }
 
         @Override
-        public int getCount() { return 3; }
+        public int getCount() { return DATA_COUNT; }
     };
 
     public ElectricOvenBlockEntity(BlockPos pos, BlockState state)
     {
         super(ModBlocks.ELECTRIC_OVEN_BLOCK_ENTITY.get(), pos, state, defaultInventory(SLOTS), TFCElectricCooking.MOD_ID);
-        automationInventory = new AutomationItemHandler(getInventory(), this::canAutomationInsert, this::canAutomationExtract);
+        automationInventory = new AutomationItemHandler(getInventory(), this::canAutomationInsert, this::canAutomationExtract, this::syncAutomationChange);
+    }
+
+    private void syncAutomationChange()
+    {
+        setChanged();
+        markForSync();
     }
 
     public static InventoryBlockEntity.InventoryFactory<ItemStackHandler> defaultInventory(int slots)
@@ -135,6 +149,7 @@ public class ElectricOvenBlockEntity extends TickableInventoryBlockEntity<ItemSt
         if (wasPowered != shouldPower)
         {
             level.setBlockAndUpdate(worldPosition, getBlockState().setValue(ElectricOvenBlock.POWERED, shouldPower));
+            markForSync();
         }
     }
 
@@ -248,6 +263,39 @@ public class ElectricOvenBlockEntity extends TickableInventoryBlockEntity<ItemSt
         return syncData;
     }
 
+    private void setSyncedEnergy(int energy)
+    {
+        energyStorage.setEnergy(energy);
+    }
+
+    private void setSyncedEnergyPart(int index, int value)
+    {
+        if (index == DATA_ENERGY_LOW)
+        {
+            syncedEnergyLow = value;
+        }
+        else if (index == DATA_ENERGY_HIGH)
+        {
+            syncedEnergyHigh = value;
+        }
+        setSyncedEnergy(combineUnsignedShorts(syncedEnergyLow, syncedEnergyHigh));
+    }
+
+    private static int low16(int value)
+    {
+        return value & 0xFFFF;
+    }
+
+    private static int high16(int value)
+    {
+        return (value >>> 16) & 0xFFFF;
+    }
+
+    private static int combineUnsignedShorts(int low, int high)
+    {
+        return ((high & 0xFFFF) << 16) | (low & 0xFFFF);
+    }
+
     @Override
     public void setAndUpdateSlots(int slot)
     {
@@ -257,6 +305,7 @@ public class ElectricOvenBlockEntity extends TickableInventoryBlockEntity<ItemSt
         }
         super.setAndUpdateSlots(slot);
         needsRecipeUpdate = true;
+        markForSync();
     }
 
     @Override
@@ -316,5 +365,18 @@ public class ElectricOvenBlockEntity extends TickableInventoryBlockEntity<ItemSt
     public Component getDisplayName()
     {
         return Component.translatable("block.tfcelectriccooking.electric_oven");
+    }
+
+    private static final class MutableEnergyStorage extends EnergyStorage
+    {
+        private MutableEnergyStorage(int capacity, int maxReceive, int maxExtract, int energy)
+        {
+            super(capacity, maxReceive, maxExtract, energy);
+        }
+
+        private void setEnergy(int energy)
+        {
+            this.energy = Math.max(0, Math.min(capacity, energy));
+        }
     }
 }

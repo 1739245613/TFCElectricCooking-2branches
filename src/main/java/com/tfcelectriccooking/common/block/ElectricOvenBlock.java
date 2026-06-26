@@ -1,7 +1,13 @@
 package com.tfcelectriccooking.common.block;
 
+import com.tfcelectriccooking.common.ModBlocks;
+import com.tfcelectriccooking.common.ModSounds;
+import com.tfcelectriccooking.common.blockentity.ElectricOvenBlockEntity;
+import net.dries007.tfc.common.blockentities.InventoryBlockEntity;
+import net.dries007.tfc.util.Helpers;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.ItemInteractionResult;
@@ -26,14 +32,12 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
-import net.dries007.tfc.common.blockentities.InventoryBlockEntity;
-import com.tfcelectriccooking.common.ModBlocks;
-import com.tfcelectriccooking.common.blockentity.ElectricOvenBlockEntity;
 
 public class ElectricOvenBlock extends Block implements EntityBlock
 {
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
     public static final BooleanProperty POWERED = BooleanProperty.create("powered");
+    public static final BooleanProperty OPEN = BlockStateProperties.OPEN;
     private static final VoxelShape SHAPE = Block.box(1, 1, 1, 15, 15, 15);
 
     public ElectricOvenBlock()
@@ -46,13 +50,14 @@ public class ElectricOvenBlock extends Block implements EntityBlock
             .lightLevel(state -> state.getValue(POWERED) ? 13 : 0));
         registerDefaultState(stateDefinition.any()
             .setValue(FACING, Direction.NORTH)
-            .setValue(POWERED, false));
+            .setValue(POWERED, false)
+            .setValue(OPEN, false));
     }
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder)
     {
-        builder.add(FACING, POWERED);
+        builder.add(FACING, POWERED, OPEN);
     }
 
     @Nullable
@@ -95,13 +100,37 @@ public class ElectricOvenBlock extends Block implements EntityBlock
                 return ItemInteractionResult.sidedSuccess(true);
             }
 
+            if (player.isShiftKeyDown())
+            {
+                final boolean open = !state.getValue(OPEN);
+                setOpen(level, pos, state, open);
+                player.displayClientMessage(Component.translatable(open ? "tfcelectriccooking.message.container_open" : "tfcelectriccooking.message.container_closed"), true);
+                return ItemInteractionResult.sidedSuccess(false);
+            }
+
             if (player instanceof ServerPlayer serverPlayer)
             {
+                setOpen(level, pos, state, true);
                 serverPlayer.openMenu(oven, pos);
             }
             return ItemInteractionResult.sidedSuccess(level.isClientSide());
         }
         return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+    }
+
+    public static void setOpen(Level level, BlockPos pos, BlockState state, boolean open)
+    {
+        BlockState currentState = level.getBlockState(pos);
+        if (!currentState.is(state.getBlock()))
+        {
+            currentState = state;
+        }
+
+        if (currentState.hasProperty(OPEN) && currentState.getValue(OPEN) != open)
+        {
+            level.setBlockAndUpdate(pos, currentState.setValue(OPEN, open));
+            Helpers.playSound(level, pos, open ? ModSounds.ELECTRIC_OVEN_OPEN.get() : ModSounds.ELECTRIC_OVEN_CLOSE.get());
+        }
     }
 
     @SuppressWarnings("deprecation")

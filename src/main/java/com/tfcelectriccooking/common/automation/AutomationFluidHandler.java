@@ -11,12 +11,19 @@ public final class AutomationFluidHandler implements IFluidHandler
     private final IFluidHandler delegate;
     private final Predicate<FluidStack> canFill;
     private final BooleanSupplier canDrain;
+    private final Runnable onChanged;
 
     public AutomationFluidHandler(IFluidHandler delegate, Predicate<FluidStack> canFill, BooleanSupplier canDrain)
+    {
+        this(delegate, canFill, canDrain, () -> {});
+    }
+
+    public AutomationFluidHandler(IFluidHandler delegate, Predicate<FluidStack> canFill, BooleanSupplier canDrain, Runnable onChanged)
     {
         this.delegate = delegate;
         this.canFill = canFill;
         this.canDrain = canDrain;
+        this.onChanged = onChanged;
     }
 
     @Override
@@ -47,20 +54,35 @@ public final class AutomationFluidHandler implements IFluidHandler
     @Override
     public int fill(FluidStack resource, FluidAction action)
     {
-        return canFill.test(resource) ? delegate.fill(resource, action) : 0;
+        final int filled = canFill.test(resource) ? delegate.fill(resource, action) : 0;
+        if (action.execute() && filled > 0)
+        {
+            onChanged.run();
+        }
+        return filled;
     }
 
     @NotNull
     @Override
     public FluidStack drain(FluidStack resource, FluidAction action)
     {
-        return canDrain.getAsBoolean() ? delegate.drain(resource, action) : FluidStack.EMPTY;
+        final FluidStack drained = canDrain.getAsBoolean() ? delegate.drain(resource, action) : FluidStack.EMPTY;
+        if (action.execute() && !drained.isEmpty())
+        {
+            onChanged.run();
+        }
+        return drained;
     }
 
     @NotNull
     @Override
     public FluidStack drain(int maxDrain, FluidAction action)
     {
-        return canDrain.getAsBoolean() ? delegate.drain(maxDrain, action) : FluidStack.EMPTY;
+        final FluidStack drained = canDrain.getAsBoolean() ? delegate.drain(maxDrain, action) : FluidStack.EMPTY;
+        if (action.execute() && !drained.isEmpty())
+        {
+            onChanged.run();
+        }
+        return drained;
     }
 }
